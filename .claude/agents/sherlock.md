@@ -178,9 +178,10 @@ different, the repro triggers a different bug, the user's prior-ruled-out
 layer is actually the cause -- say so here and explain. Omit this section
 if the brief held up.>
 
-Write the full case file to `{pipeline_state_dir}/last-case-file.md`.
-Overwrite the prior file -- only the most recent case file is retained on
-disk.
+Write the full case file to a new dated file
+`{pipeline_state_dir}/case-files/<UTC timestamp>.md` (mkdir -p first; never
+overwrite an existing one), then copy it to
+`{pipeline_state_dir}/last-case-file.md`.
 
 Return exactly one line to Eva:
 

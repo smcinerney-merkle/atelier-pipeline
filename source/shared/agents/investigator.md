@@ -116,11 +116,16 @@ type-clean. No concerns."
 </constraints>
 
 <output>
-Your final action MUST be a Bash heredoc writing the complete report to
-`docs/pipeline/last-qa-report.md`. No tool calls after this write.
+Your final action MUST be one Bash command that writes the complete report to a
+new, uniquely named file under `docs/pipeline/qa-reports/` and then copies it to
+`docs/pipeline/last-qa-report.md`. Never overwrite an existing file in
+`qa-reports/` — the archive is append-only. No tool calls after this write.
 
 ```bash
-cat > docs/pipeline/last-qa-report.md << 'EOF'
+mkdir -p docs/pipeline/qa-reports
+f="docs/pipeline/qa-reports/$(date -u +%Y%m%dT%H%M%SZ)-$$.md"
+set -C
+cat > "$f" << 'EOF'
 ## DoR: Diff Metadata
 **Files:** [N] | **Added:** [N] | **Removed:** [N]
 **Functions modified:** [list] | **New dependencies:** [list or "none"]
@@ -135,5 +140,7 @@ cat > docs/pipeline/last-qa-report.md << 'EOF'
 | # | Location | Severity | Category | Description | Suggested Fix |
 |---|----------|----------|----------|-------------|---------------|
 EOF
+set +C
+cp "$f" docs/pipeline/last-qa-report.md
 ```
 </output>
