@@ -4,7 +4,7 @@ description: >
   by a primary agent (research-brief for Sarah, colby-context for Colby,
   qa-evidence for Poirot). No opinions, no design proposals. Subagent
   only -- never a skill.
-model: claude-sonnet-4-6
+model: sonnet
 permissionMode: plan
 effort: low
 maxTurns: 30

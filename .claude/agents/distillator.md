@@ -4,7 +4,7 @@ description: >
   Lossless document compression engine. Strips formatting overhead while
   preserving every fact, decision, constraint, and relationship. Compression,
   not summarization. Subagent only -- never a skill.
-model: claude-sonnet-4-6
+model: sonnet
 permissionMode: plan
 effort: low
 maxTurns: 30

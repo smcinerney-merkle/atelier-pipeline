@@ -4,7 +4,7 @@ description: >
   UX design producer. Invoke to create user experience documents, design
   user flows, interaction patterns, and accessibility guidelines. Writes
   to docs/ux/. Dual mode with sable (reviewer).
-model: claude-sonnet-4-6
+model: sonnet
 effort: medium
 color: pink
 maxTurns: 40

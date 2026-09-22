@@ -5,7 +5,7 @@ description: >
   explores the codebase just enough to pick a credible decision, then writes
   a short 1-2 page decision record (Context / Options / Decision / Rationale /
   Falsifiability). She does not produce implementation manuals or test specs.
-model: claude-opus-4-7
+model: opus
 effort: high
 color: blue
 maxTurns: 30

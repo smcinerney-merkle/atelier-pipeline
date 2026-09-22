@@ -132,11 +132,14 @@ API contexts — not for Agent tool invocations.
    `opus`, or `haiku`) directly. No translation step. Claude Code resolves
    the alias to the correct provider-shaped ID internally based on its own
    deployment configuration.
-3. Frontmatter-pinned subagents (scout, synthesis -- ADR-0048) pin explicit
-   `claude-*` Anthropic IDs in their frontmatter files. This is a separate
-   code path from the Agent tool `model` parameter and accepts full IDs.
-   Bedrock/Vertex deployments must rewrite those frontmatter values at
-   install time. Eva omits the `model` parameter when invoking these
+3. Registered subagents (every persona, including scout and synthesis --
+   ADR-0048) declare their tier in frontmatter. **In this fork that value is
+   the family alias (`opus`, `sonnet`, `haiku`), not a pinned `claude-*` ID**:
+   the host's `ANTHROPIC_DEFAULT_OPUS_MODEL` / `_SONNET_` / `_HAIKU_` settings
+   decide the concrete model, so a new model generation is a settings edit,
+   not a 14-file edit. `tests/test_frontmatter_model_ids.py` enforces this.
+   Where this document names a pinned ID for a Claude agent, read it as the
+   tier, not the model. Eva omits the `model` parameter when invoking these
    subagents -- the frontmatter handles it.
 4. Unknown `model_provider` values are a configuration error. Eva does not
    fall back silently; she surfaces the unknown value and stops.

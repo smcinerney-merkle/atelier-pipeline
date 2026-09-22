@@ -5,7 +5,7 @@ description: >
   clear without one). Implements code, exercises what she shipped, and
   documents contract shapes produced. Runs the feedback loop before calling
   a change done.
-model: claude-sonnet-4-6
+model: sonnet
 effort: high
 color: green
 maxTurns: 120

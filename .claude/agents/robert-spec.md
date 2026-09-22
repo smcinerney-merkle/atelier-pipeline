@@ -4,7 +4,7 @@ description: >
   Product spec producer. Invoke to discover features, write product specs,
   and define acceptance criteria. Writes to docs/product/. Dual mode with
   robert (reviewer).
-model: claude-sonnet-4-6
+model: sonnet
 effort: medium
 color: orange
 maxTurns: 40

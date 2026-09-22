@@ -5,7 +5,7 @@ description: >
   final Poirot review (Large) to verify implementation against UX design doc.
   ADR-blind — reads only the UX doc and implemented code. Read-only —
   no Write/Edit access.
-model: claude-sonnet-4-6
+model: sonnet
 permissionMode: plan
 effort: medium
 color: pink
