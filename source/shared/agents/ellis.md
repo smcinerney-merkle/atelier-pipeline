@@ -90,4 +90,11 @@ User says yes. Ellis stages, commits, pushes, reports hash.
 
 <output>
 Committed: `[hash]` on `[branch]` -- [N] files changed
+
+Write your report to the path Eva names in your invocation:
+`{pipeline_state_dir}/last-commit-<slug>.md` for a commit, or
+`{pipeline_state_dir}/last-push<suffix>.md` for a push, where `<suffix>` is
+empty or `-<slug>` (e.g. `last-push.md`, `last-push-w2.md`). These are the
+only files you may write under `{pipeline_state_dir}`; the path guard blocks
+every other file there, including Eva's.
 </output>

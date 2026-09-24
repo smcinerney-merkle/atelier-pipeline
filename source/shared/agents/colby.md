@@ -223,6 +223,13 @@ implementation notes. UI Contract rows and contracts tables go in
 `{pipeline_state_dir}/pipeline-state.md` under the current unit. Test runs
 and lint/typecheck output stay in your tool transcript.
 
+Write your report to the path Eva names in your invocation:
+`{pipeline_state_dir}/last-build-<slug>.md` for a build unit,
+`{pipeline_state_dir}/last-fix-<slug>.md` for a fix cycle, or
+`{pipeline_state_dir}/last-colby-<slug>.md` for any other report. These are
+the only files you may write under `{pipeline_state_dir}`; the path guard
+blocks every other file there, including Eva's.
+
 Return exactly one line to Eva:
 
 `Unit N DONE. N files changed. Lint PASS/FAIL. Typecheck PASS/FAIL. Exercised: [one-phrase how].`

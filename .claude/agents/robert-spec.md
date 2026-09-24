@@ -10,10 +10,18 @@ color: orange
 maxTurns: 40
 tools: Read, Write, Edit, Glob, Grep, Bash
 permissionMode: acceptEdits
+# hooks: must be a record keyed by event name. The older list form
+# (`- event: PreToolUse` / `matcher:` / `command:`) fails schema validation
+# with `expected "record"`, and Claude Code then drops the WHOLE agent
+# definition ("Agent type not found"). Record form registers and fires in
+# trusted folders. The command string is byte-identical to this guard's
+# settings.json registration so Claude Code runs it once, not twice.
 hooks:
-  - event: PreToolUse
-    matcher: Write|Edit
-    command: .claude/hooks/enforce-product-paths.sh
+  PreToolUse:
+    - matcher: Write|Edit|MultiEdit
+      hooks:
+        - type: command
+          command: "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-product-paths.sh"
 ---
 <!-- Part of atelier-pipeline. Customize project-specific values in CLAUDE.md -->
 
@@ -54,6 +62,11 @@ Derive scope from Eva's `<task>` tag — it states what the spec must cover.
 
 <output>
 Product spec written to docs/product/{feature}-spec.md with acceptance criteria.
+
+Write your report to `{pipeline_state_dir}/last-spec-<slug>.md` (the path Eva
+names in your invocation). These are the only files you may write under
+`{pipeline_state_dir}`; the path guard blocks every other file there,
+including Eva's.
 
 Return exactly one line to Eva: `robert-spec: Spec written to docs/product/{feature}-spec.md. [N] acceptance criteria.`
 </output>

@@ -11,10 +11,18 @@ color: green
 maxTurns: 120
 tools: Read, Write, Edit, MultiEdit, Glob, Grep, Bash
 permissionMode: acceptEdits
+# hooks: must be a record keyed by event name. The older list form
+# (`- event: PreToolUse` / `matcher:` / `command:`) fails schema validation
+# with `expected "record"`, and Claude Code then drops the WHOLE agent
+# definition ("Agent type not found"). Record form registers and fires in
+# trusted folders. The command string is byte-identical to this guard's
+# settings.json registration so Claude Code runs it once, not twice.
 hooks:
-  - event: PreToolUse
-    matcher: Write|Edit|MultiEdit
-    command: .claude/hooks/enforce-colby-paths.sh
+  PreToolUse:
+    - matcher: Write|Edit|MultiEdit
+      hooks:
+        - type: command
+          command: "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-colby-paths.sh"
 ---
 <!-- Part of atelier-pipeline. Customize project-specific values in CLAUDE.md -->
 
@@ -240,6 +248,13 @@ Produced, Contracts Consumed, Bugs Discovered) into the commit message /
 implementation notes. UI Contract rows and contracts tables go in
 `{pipeline_state_dir}/pipeline-state.md` under the current unit. Test runs
 and lint/typecheck output stay in your tool transcript.
+
+Write your report to the path Eva names in your invocation:
+`{pipeline_state_dir}/last-build-<slug>.md` for a build unit,
+`{pipeline_state_dir}/last-fix-<slug>.md` for a fix cycle, or
+`{pipeline_state_dir}/last-colby-<slug>.md` for any other report. These are
+the only files you may write under `{pipeline_state_dir}`; the path guard
+blocks every other file there, including Eva's.
 
 Return exactly one line to Eva:
 

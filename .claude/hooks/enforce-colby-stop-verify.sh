@@ -1,7 +1,10 @@
 #!/bin/bash
 # SubagentStop verification hook -- typecheck + auto-format after Colby stops (ADR-0050).
 #
-# Gates internally on agent_type == "colby"; exits 0 immediately for any other agent.
+# Gates internally on agent_type == "colby" OR agent_type starting with
+# "colby-" (a named Agent-tool instance, e.g. "colby-u10-tiebreak"); exits 0
+# immediately for any other agent. See hook_lib_agent_type_matches in
+# hook-lib.sh for why the prefix form is needed.
 # Loads verify_commands.format and verify_commands.typecheck from pipeline-config.json
 # (precedence: .cursor/pipeline-config.json then .claude/pipeline-config.json).
 #
@@ -60,7 +63,22 @@ if declare -f hook_lib_get_agent_type >/dev/null 2>&1; then
 else
   AGENT_TYPE=$(echo "$INPUT" | jq -r '.agent_type // .tool_input.subagent_type // empty' 2>/dev/null || true)
 fi
-[ "$AGENT_TYPE" = "colby" ] || exit 0
+# Match bare "colby" AND named Agent-tool instances ("colby-u10-tiebreak").
+# agent_type holds the registered subagent_type for a plain subagent, but the
+# instance name for a named teammate spawn -- see hook_lib_agent_type_matches
+# in hook-lib.sh. No other allowlisted persona begins with "colby", so the
+# prefix match is unambiguous here ("colbyx" does not match).
+if declare -f hook_lib_agent_type_matches >/dev/null 2>&1; then
+  hook_lib_agent_type_matches "$AGENT_TYPE" colby || exit 0
+else
+  # hook-lib.sh failed to load -- fall back to the old exact-match check
+  # (fail-narrow: named Colby instances won't match, same as before this fix).
+  # Loud on purpose: this fallback silently restores the pre-fix bypass (named
+  # instances like "colby-u10-tiebreak" never match a bare-string check), so a
+  # missing/unreadable hook-lib.sh must not degrade without a signal.
+  echo "WARNING: enforce-colby-stop-verify.sh: hook-lib.sh unavailable -- falling back to exact-match agent_type check ('colby' only). Named Colby instances (e.g. colby-u10-tiebreak) will NOT match and will silently skip typecheck/format verification until hook-lib.sh is restored." >&2
+  [ "$AGENT_TYPE" = "colby" ] || exit 0
+fi
 
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null || true)
 [ -z "$SESSION_ID" ] && SESSION_ID="unknown"

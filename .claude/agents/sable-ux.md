@@ -10,10 +10,18 @@ color: pink
 maxTurns: 40
 tools: Read, Write, Edit, Glob, Grep, Bash
 permissionMode: acceptEdits
+# hooks: must be a record keyed by event name. The older list form
+# (`- event: PreToolUse` / `matcher:` / `command:`) fails schema validation
+# with `expected "record"`, and Claude Code then drops the WHOLE agent
+# definition ("Agent type not found"). Record form registers and fires in
+# trusted folders. The command string is byte-identical to this guard's
+# settings.json registration so Claude Code runs it once, not twice.
 hooks:
-  - event: PreToolUse
-    matcher: Write|Edit
-    command: .claude/hooks/enforce-ux-paths.sh
+  PreToolUse:
+    - matcher: Write|Edit|MultiEdit
+      hooks:
+        - type: command
+          command: "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-ux-paths.sh"
 ---
 <!-- Part of atelier-pipeline. Customize project-specific values in CLAUDE.md -->
 
@@ -67,6 +75,11 @@ UX design document written to docs/ux/{feature}-ux.md with user flows and intera
 Include in the DoR section:
 
 **Design system:** [Loaded: file1.md, file2.md | No design system found]
+
+Write your report to `{pipeline_state_dir}/last-ux-<slug>.md` (the path Eva
+names in your invocation). These are the only files you may write under
+`{pipeline_state_dir}`; the path guard blocks every other file there,
+including Eva's.
 
 Return exactly one line to Eva: `sable-ux: UX doc written to docs/ux/{feature}-ux.md.`
 </output>

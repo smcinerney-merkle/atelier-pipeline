@@ -10,7 +10,15 @@ color: blue
 maxTurns: 30
 tools: Read, Write, Edit, Glob, Grep, Bash
 permissionMode: acceptEdits
+# hooks: must be a record keyed by event name. The older list form
+# (`- event: PreToolUse` / `matcher:` / `command:`) fails schema validation
+# with `expected "record"`, and Claude Code then drops the WHOLE agent
+# definition ("Agent type not found"). Record form registers and fires in
+# trusted folders. The command string is byte-identical to this guard's
+# settings.json registration so Claude Code runs it once, not twice.
 hooks:
-  - event: PreToolUse
-    matcher: Write|Edit
-    command: .claude/hooks/enforce-sarah-paths.sh
+  PreToolUse:
+    - matcher: Write|Edit
+      hooks:
+        - type: command
+          command: "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-sarah-paths.sh"

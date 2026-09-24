@@ -36,7 +36,50 @@ optional and must be installed for the pipeline to function correctly.
 | `source/shared/hooks/session-boot.sh` | `.claude/hooks/session-boot.sh` | Session boot data collector (SessionStart) -- reads pipeline state and config |
 | `source/shared/hooks/hook-lib.sh` | `.claude/hooks/hook-lib.sh` | Shared hook utility library — JSON parsers, agent type extraction, deny/allow emitters (sourced by enforcement and telemetry hooks) |
 | `source/shared/hooks/pipeline-state-path.sh` | `.claude/hooks/pipeline-state-path.sh` | Per-worktree session state path resolver — session_state_dir() and error_patterns_path() (sourced by session-boot, post-compact-reinject, prompt-compact-advisory) |
-| `source/claude/hooks/enforcement-config.json` | `.claude/hooks/enforcement-config.json` | Project-specific paths and agent rules |
+| `source/claude/hooks/enforcement-config.json` | `.claude/hooks/enforcement-config.json` | Project-specific paths and agent rules. **Never overwrite an existing copy** -- see "Preserve an existing enforcement-config.json" below. |
+
+#### Preserve an existing enforcement-config.json
+
+`.claude/hooks/enforcement-config.json` holds the project's own paths and test
+settings, so a reinstall or upgrade must never overwrite it. Before copying
+the template, check whether the destination already exists:
+
+- **Absent:** copy the template, then customize it (see "Customize
+  enforcement-config.json" below).
+- **Present:** do NOT copy the template over it. Add only the required keys
+  that are missing -- every top-level key in the template
+  (`source/claude/hooks/enforcement-config.json`) that the installed file
+  lacks -- using the template's value. Keys already present are never changed,
+  even when their value differs from the template or is empty (validation
+  below warns about empty values; it does not rewrite them).
+
+```bash
+TEMPLATE="${CLAUDE_PLUGIN_ROOT}/source/claude/hooks/enforcement-config.json"
+INSTALLED=".claude/hooks/enforcement-config.json"
+if [ -f "$INSTALLED" ]; then
+  # Keys in the template that the installed file lacks.
+  ADDED=$(jq -r -s '(.[0] | keys) - (.[1] | keys) | .[]' "$TEMPLATE" "$INSTALLED")
+  if [ -n "$ADDED" ]; then
+    # Right-hand side wins: every existing key keeps its installed value.
+    jq -s '.[0] + .[1]' "$TEMPLATE" "$INSTALLED" > "$INSTALLED.tmp" \
+      && mv "$INSTALLED.tmp" "$INSTALLED"
+  fi
+else
+  cp "$TEMPLATE" "$INSTALLED"
+fi
+```
+
+If `jq` fails to parse the installed file (malformed JSON), leave it untouched
+and warn: `WARNING: .claude/hooks/enforcement-config.json is not valid JSON --
+left unchanged. Fix it by hand, then re-run /pipeline-setup.`
+
+Report the outcome to the user in one line:
+- **Keys added:** `enforcement-config.json preserved; added missing keys: <comma-separated list>.`
+- **Nothing missing:** `enforcement-config.json preserved; no keys added.`
+- **Fresh copy:** `enforcement-config.json installed from template.`
+
+Apply "Customize enforcement-config.json" only to a fresh copy or to keys
+just added; never re-customize keys the project already had.
 
 #### ADR-0050 verify_commands keys (`enforce-colby-stop-verify.sh`, opt-in)
 
@@ -106,7 +149,11 @@ file already exists. Add this hooks section:
     "PreToolUse": [
       {
         "matcher": "Write|Edit|MultiEdit",
-        "hooks": [{"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-eva-paths.sh"}]
+        "hooks": [{"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-eva-paths.sh"}, {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-colby-paths.sh"}, {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-ellis-paths.sh"}, {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-agatha-paths.sh"}, {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-product-paths.sh"}, {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-ux-paths.sh"}]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [{"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-sarah-paths.sh"}]
       },
       {
         "matcher": "Agent",
@@ -181,6 +228,15 @@ file already exists. Add this hooks section:
   }
 }
 ```
+
+**Per-agent path guards are registered twice on purpose.** The six guards
+(`enforce-{colby,sarah,ellis,agatha,product,ux}-paths.sh`) are also declared in
+their agents' frontmatter (`source/claude/agents/*.frontmatter.yml`). Each guard
+self-gates on `agent_type`, so the settings.json copy is a no-op for every
+other agent and for the main thread. Keep each command string byte-identical
+to its frontmatter `command:` -- Claude Code runs an identical command once,
+but any difference (quoting, a `./` prefix) makes it run twice. Sarah's guard
+sits under `Write|Edit` because her script checks only those tools.
 
 **Important:** These hooks require `jq` to be installed. Check with `command -v jq`.
 If `jq` is not available, tell the user: "Install jq for pipeline enforcement hooks:

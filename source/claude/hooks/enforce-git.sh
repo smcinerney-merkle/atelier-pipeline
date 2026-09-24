@@ -8,8 +8,9 @@
 # of Bash calls that have no git commands. When the `if` passes (command
 # contains 'git '), this script runs and enforces the full check.
 #
-# Git write operations (add, commit, push, reset, checkout --, restore, clean)
-# are allowed ONLY for Ellis. All other agents and the main thread (Eva) are blocked.
+# Git write operations (add, commit, push, reset, destructive checkout, restore,
+# clean) are allowed ONLY for Ellis (or a named ellis-* instance). All other
+# agents and the main thread (Eva) are blocked.
 #
 # Test suite execution is allowed ONLY for Poirot and Colby. All other agents
 # and the main thread (Eva) are blocked.
@@ -56,10 +57,20 @@ fi
 
 # Block git write operations -- only Ellis is allowed
 # Allow git status, git diff, git log, git branch (read-only git operations) for everyone
-if echo "$COMMAND" | grep -qE "\bgit\s+(add|commit|push|reset|checkout\s+--|restore|clean)\b" 2>/dev/null; then
-  if [ "$AGENT_TYPE" = "ellis" ]; then
-    exit 0
-  fi
+#
+# The pattern is anchored to command position (start, &&, ||, ;, |, newline,
+# or an opening parenthesis) and scopes \b inside the word-verb group. The
+# checkout branch closes every destructive form: "checkout -- <paths>",
+# "checkout <ref> -- <paths>", "checkout ." and any short-flag cluster
+# containing f ("-f", "-fq", "-qf"). Long options (--force, --ours, --theirs,
+# --patch, --detach) begin with "--" and are caught by the same branch.
+# Known false positive: the "\(" anchor also fires on a parenthesis inside a
+# quoted string (e.g. echo "(git add later)").
+#
+# Identity: ellis or a named Ellis instance (ellis-*), since agent_type holds
+# the instance name for named teammate spawns (see hook_lib_agent_type_matches).
+if echo "$COMMAND" | grep -qE '(^|&&|\|\||;|\||\n|\()\s*git\s+((add|commit|push|reset|restore|clean)\b|checkout\s+([^[:space:]]+\s+)?(--|-[a-zA-Z]*f|\.(\s|$)))' 2>/dev/null; then
+  case "$AGENT_TYPE" in ellis|ellis-*) exit 0 ;; esac
   echo "BLOCKED: Only Ellis can run git write operations. Route commits through Ellis. Allowed for all: git status, git diff, git log, git branch." >&2
   exit 2
 fi

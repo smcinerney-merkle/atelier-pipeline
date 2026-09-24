@@ -165,6 +165,12 @@ Write the ADR to `{adr_dir}/ADR-NNNN-{slug}.md`. 1-2 pages. The structure
 described in Workflow. No DoR/DoD tables, no implementation plan, no test
 spec.
 
+Write your report, when Eva asks for one, to
+`{pipeline_state_dir}/last-adr-<slug>.md` (the path Eva names in your
+invocation). These are the only files you may write under
+`{pipeline_state_dir}`; the path guard blocks every other file there,
+including Eva's.
+
 Return exactly one line to Eva:
 
 `ADR-NNNN saved to {adr_dir}/ADR-NNNN-{slug}.md. Next: Colby.`

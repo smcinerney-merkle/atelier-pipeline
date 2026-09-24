@@ -85,6 +85,67 @@ hook_lib_get_agent_type() {
   jq -r '.agent_type // .tool_input.subagent_type // empty' 2>/dev/null
 }
 
+# ─── hook_lib_agent_type_matches <agent_type> <base_type...> ─────────────────
+#
+# Returns 0 (true) when $agent_type is exactly one of the given base types,
+# OR begins with "<base_type>-" (a named Agent-tool instance, e.g. Eva
+# invoking Agent({name: "colby-u10-tiebreak", subagent_type: "colby"})).
+#
+# Why this exists: .agent_type holds the registered subagent_type for a plain
+# subagent ("colby"), but the instance NAME for a named teammate spawn
+# ("colby-u10-tiebreak") in an interactive session with agent teams on
+# (probed on CLI 2.1.280). A bare-string match (`"$AGENT_TYPE" = colby`)
+# misses every named instance. The explicit-hyphen prefix check restores the
+# match without widening it to unrelated names that share a leading
+# substring: base "colby" matches "colby" and "colby-*", never "colbyalt".
+#
+# NOTE: this is a naming-convention match, not a true subagent_type
+# resolution. It cannot know that "poirot-*" instances run as subagent_type
+# "investigator" -- callers that allowlist Poirot must list both
+# "investigator" and "poirot" among the base types.
+#
+# Usage:
+#   if hook_lib_agent_type_matches "$AGENT_TYPE" sarah colby agatha robert \
+#        robert-spec sable sable-ux ellis; then ... fi
+
+hook_lib_agent_type_matches() {
+  local agent_type="$1"
+  shift
+  local base
+  for base in "$@"; do
+    if [ "$agent_type" = "$base" ] || [[ "$agent_type" == "$base"-* ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# ─── hook_lib_agent_base_type <agent_type> <base_type...> ────────────────────
+#
+# Echoes the base type that $agent_type matches under the same rule as
+# hook_lib_agent_type_matches, choosing the LONGEST matching base so that
+# overlapping pairs resolve to the more specific persona ("robert-spec-retro"
+# -> robert-spec, not robert; "sable-ux-overlay" -> sable-ux, not sable).
+# Echoes nothing and returns 1 when no base matches. Use this wherever the
+# agent type is a lookup key (e.g. the ADR-0060 agent_roster), since a named
+# instance is never itself a key.
+#
+# Usage:
+#   base=$(hook_lib_agent_base_type "$AGENT_TYPE" robert robert-spec) || exit 0
+
+hook_lib_agent_base_type() {
+  local agent_type="$1"
+  shift
+  local base best=""
+  for base in "$@"; do
+    if [ "$agent_type" = "$base" ] || [[ "$agent_type" == "$base"-* ]]; then
+      [ "${#base}" -gt "${#best}" ] && best="$base"
+    fi
+  done
+  [ -n "$best" ] || return 1
+  printf '%s\n' "$best"
+}
+
 # ─── hook_lib_assert_agent_type <expected> ────────────────────────────────────
 #
 # Reads JSON from stdin. Calls hook_lib_get_agent_type and compares to

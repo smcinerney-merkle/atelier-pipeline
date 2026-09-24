@@ -11,6 +11,39 @@ if ! command -v jq &>/dev/null; then
   exit 2
 fi
 
+# Source shared hook library for the self-gate below (hook_lib_agent_type_matches).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
+if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/hook-lib.sh" ]; then
+  source "$SCRIPT_DIR/hook-lib.sh" 2>/dev/null || true
+fi
+
+# Self-gate: this hook enforces Colby's paths only. It is registered both in
+# the agent's frontmatter and in settings.json (so it also sees every other
+# agent and the main thread). `agent_type` holds the registered type for a
+# plain subagent ("colby") and the instance name for a named teammate spawn
+# ("colby-u10-tiebreak") -- see hook_lib_agent_type_matches in hook-lib.sh.
+# Any other agent (or Eva's main thread, where agent_type is empty) exits 0
+# here -- this guard is not theirs to enforce.
+if declare -f hook_lib_get_agent_type >/dev/null 2>&1; then
+  AGENT_TYPE=$(echo "$INPUT" | hook_lib_get_agent_type 2>/dev/null || true)
+else
+  AGENT_TYPE=$(echo "$INPUT" | jq -r '.agent_type // .tool_input.subagent_type // empty' 2>/dev/null || true)
+fi
+
+if declare -f hook_lib_agent_type_matches >/dev/null 2>&1; then
+  hook_lib_agent_type_matches "$AGENT_TYPE" colby || exit 0
+else
+  # hook-lib.sh failed to load -- fall back to exact match (fail-narrow:
+  # named instances like "colby-u10-tiebreak" won't match and this guard will
+  # silently NOT fire for them until hook-lib.sh is restored). Loud on
+  # purpose: a missing/unreadable hook-lib.sh must not degrade silently.
+  echo "WARNING: enforce-colby-paths.sh: hook-lib.sh unavailable -- falling back to exact-match agent_type check ('$AGENT_TYPE' vs 'colby'). Named Agent-tool instances (e.g. colby-u10-tiebreak) will NOT match and this guard will not fire for them until hook-lib.sh is restored." >&2
+  case "$AGENT_TYPE" in
+    colby) ;;
+    *) exit 0 ;;
+  esac
+fi
+
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
 case "$TOOL_NAME" in Write|Edit|MultiEdit) ;; *) exit 0 ;; esac
 
@@ -38,8 +71,39 @@ fi
 # Reject path traversal
 [[ "$FILE_PATH" == *..* ]] && { echo "BLOCKED: Path traversal detected in $FILE_PATH" >&2; exit 2; }
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG="$SCRIPT_DIR/enforcement-config.json"
+
+# Pipeline state directory: per-agent report allowlist, deny by default.
+# Eva owns this directory -- pipeline-state.md, context-brief.md,
+# error-patterns.md and investigation-ledger.md are hers alone (see
+# default-persona.md). Colby may write here ONLY its own report files, as
+# direct children of the state directory: last-build-*.md, last-fix-*.md, last-colby-*.md.
+# These prefixes are the ones Eva names in each invocation's <output> (the
+# practice this was ported from); colby.md's <output> contract names the
+# same prefixes, and a parity test keeps the two in step. Everything else
+# under the state dir -- Eva's files, a sibling agent's report,
+# last-qa-report.md, last-case-file.md -- exits 2 here.
+# The */* arm must stay first: in a bash case pattern "*" also matches "/",
+# so last-build-*.md alone would admit a nested path such as
+# last-build-x/pipeline-state.md.
+# The location is read from enforcement-config.json (fallback
+# docs/pipeline). Runs after the traversal check above, so a ".." path is
+# rejected even if it would resolve inside the state directory.
+PIPELINE_STATE_DIR="docs/pipeline"
+if [ -f "$CONFIG" ]; then
+  CONFIGURED_DIR=$(jq -r '.pipeline_state_dir // empty' "$CONFIG" 2>/dev/null)
+  [ -n "$CONFIGURED_DIR" ] && PIPELINE_STATE_DIR="${CONFIGURED_DIR%/}"
+fi
+case "$FILE_PATH" in
+  "$PIPELINE_STATE_DIR"/*)
+    case "${FILE_PATH#"$PIPELINE_STATE_DIR"/}" in
+      */*) ;;
+      last-build-*.md|last-fix-*.md|last-colby-*.md) exit 0 ;;
+    esac
+    echo "BLOCKED: Colby may write under $PIPELINE_STATE_DIR/ only its own reports ($PIPELINE_STATE_DIR/last-build-*.md, $PIPELINE_STATE_DIR/last-fix-*.md, $PIPELINE_STATE_DIR/last-colby-*.md), as direct children. The rest of the state directory is Eva's. Attempted: $FILE_PATH" >&2
+    exit 2
+    ;;
+esac
 
 if [ -f "$CONFIG" ]; then
   while IFS= read -r prefix; do

@@ -10,10 +10,18 @@ color: cyan
 maxTurns: 12
 disallowedTools: Agent, NotebookEdit
 permissionMode: acceptEdits
+# hooks: must be a record keyed by event name. The older list form
+# (`- event: PreToolUse` / `matcher:` / `command:`) fails schema validation
+# with `expected "record"`, and Claude Code then drops the WHOLE agent
+# definition ("Agent type not found"). Record form registers and fires in
+# trusted folders. The command string is byte-identical to this guard's
+# settings.json registration so Claude Code runs it once, not twice.
 hooks:
-  - event: PreToolUse
-    matcher: Write|Edit|MultiEdit
-    command: .claude/hooks/enforce-ellis-paths.sh
+  PreToolUse:
+    - matcher: Write|Edit|MultiEdit
+      hooks:
+        - type: command
+          command: "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-ellis-paths.sh"
 ---
 <!-- Part of atelier-pipeline. Customize project-specific values in CLAUDE.md -->
 
@@ -107,4 +115,11 @@ User says yes. Ellis stages, commits, pushes, reports hash.
 
 <output>
 Committed: `[hash]` on `[branch]` -- [N] files changed
+
+Write your report to the path Eva names in your invocation:
+`{pipeline_state_dir}/last-commit-<slug>.md` for a commit, or
+`{pipeline_state_dir}/last-push<suffix>.md` for a push, where `<suffix>` is
+empty or `-<slug>` (e.g. `last-push.md`, `last-push-w2.md`). These are the
+only files you may write under `{pipeline_state_dir}`; the path guard blocks
+every other file there, including Eva's.
 </output>

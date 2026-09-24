@@ -32,7 +32,8 @@ if ! command -v jq &>/dev/null; then
   exit 0
 fi
 
-# Source shared hook library for hook_lib_get_agent_type.
+# Source shared hook library for hook_lib_get_agent_type and
+# hook_lib_agent_base_type.
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$SCRIPT_DIR/hook-lib.sh" ]; then
   source "$SCRIPT_DIR/hook-lib.sh" 2>/dev/null || true
@@ -47,10 +48,30 @@ else
 fi
 
 # Allowlist gate. Anything outside the 8 brain-grade producers exits silently.
-case "$AGENT_TYPE" in
-  sarah|colby|agatha|robert|robert-spec|sable|sable-ux|ellis) ;;
-  *) exit 0 ;;
-esac
+#
+# Matches bare type ("colby") AND named Agent-tool instances ("colby-u10-
+# tiebreak") via hook_lib_agent_type_matches -- see that function's header in
+# hook-lib.sh for why a bare-string match alone misses every named
+# invocation. BASE_TYPE is the persona the instance belongs to (longest
+# matching base, so "sable-ux-overlay" -> sable-ux and "robert-spec-retro" ->
+# robert-spec); the roster check below keys on it, because a named instance
+# is never itself an agent_roster key. The marker still records the raw
+# AGENT_TYPE so Eva can see which instance stopped.
+ALLOWLIST=(sarah colby agatha robert robert-spec sable sable-ux ellis)
+if declare -f hook_lib_agent_base_type >/dev/null 2>&1; then
+  BASE_TYPE=$(hook_lib_agent_base_type "$AGENT_TYPE" "${ALLOWLIST[@]}") || exit 0
+else
+  # hook-lib.sh failed to load -- fall back to the old exact-match allowlist
+  # (fail-narrow: named instances won't match, same as before this fix).
+  # Loud on purpose: this fallback silently restores the pre-fix bypass (named
+  # instances like "colby-u10-tiebreak" never match a bare-string allowlist),
+  # so a missing/unreadable hook-lib.sh must not degrade without a signal.
+  echo "WARNING: enforce-brain-capture-pending.sh: hook-lib.sh unavailable -- falling back to exact-match agent_type allowlist. Named Agent-tool instances (e.g. colby-u10-tiebreak) will NOT match and will silently bypass the brain-capture gate until hook-lib.sh is restored." >&2
+  case "$AGENT_TYPE" in
+    sarah|colby|agatha|robert|robert-spec|sable|sable-ux|ellis) BASE_TYPE="$AGENT_TYPE" ;;
+    *) exit 0 ;;
+  esac
+fi
 
 # Roster intersection (ADR-0060): skip capture when the stopping agent is not
 # in the active agent_roster. Fail-open when roster key is absent/malformed.
@@ -84,7 +105,7 @@ _roster_check() {
     "$roster_config" 2>/dev/null) || true
   [ "${enabled:-true}" != "false" ]
 }
-if ! _roster_check "$AGENT_TYPE"; then
+if ! _roster_check "$BASE_TYPE"; then
   exit 0
 fi
 

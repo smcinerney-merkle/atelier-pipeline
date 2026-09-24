@@ -331,8 +331,33 @@ def prepare_per_agent_hook(hook_name: str, tmp_path: Path) -> Path:
     return dst
 
 
+# Owning agent for each per-agent path guard. The guards self-gate on
+# agent_type (they are also registered in settings.json, so they see every
+# agent), so a payload with no agent_type is the main thread and passes
+# through. run_per_agent_hook fills in the owner when a test omits it.
+PER_AGENT_HOOK_OWNER = {
+    "enforce-colby-paths.sh": "colby",
+    "enforce-sarah-paths.sh": "sarah",
+    "enforce-ellis-paths.sh": "ellis",
+    "enforce-agatha-paths.sh": "agatha",
+    "enforce-product-paths.sh": "robert-spec",
+    "enforce-ux-paths.sh": "sable-ux",
+}
+
+
 def run_per_agent_hook(hook_name: str, input_json: str, tmp_path: Path) -> subprocess.CompletedProcess:
-    """Run a per-agent hook with JSON input. Combines stdout+stderr."""
+    """Run a per-agent hook with JSON input. Combines stdout+stderr.
+
+    When the payload has no agent_type key, the hook's owning agent is
+    injected (see PER_AGENT_HOOK_OWNER). Pass agent_type explicitly --
+    including "" for the main thread -- to test the self-gate itself.
+    """
+    owner = PER_AGENT_HOOK_OWNER.get(hook_name)
+    if owner is not None:
+        payload = json.loads(input_json)
+        if "agent_type" not in payload:
+            payload["agent_type"] = owner
+            input_json = json.dumps(payload, separators=(",", ":"))
     hook_path = prepare_per_agent_hook(hook_name, tmp_path)
     env = os.environ.copy()
     env["CLAUDE_PROJECT_DIR"] = str(tmp_path)

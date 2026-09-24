@@ -40,6 +40,15 @@ case "$TOOL_NAME" in
   *) exit 0 ;;
 esac
 
+# Only the MAIN thread's (Eva's) capture may clear the pending marker. When a
+# subagent holds an agent_capture tool, its capture would otherwise clear
+# Eva's pending marker, so her curation obligation is satisfied by someone
+# else's write and enforce-brain-capture-gate.sh reports success while proving
+# nothing (ADR-0053). Subagent payloads carry agent_id; the main thread's do
+# not. This mirrors the identical guard in enforce-brain-capture-gate.sh.
+AGENT_ID=$(echo "$INPUT" | jq -r '.agent_id // empty' 2>/dev/null || true)
+[ -n "$AGENT_ID" ] && exit 0
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG="$SCRIPT_DIR/enforcement-config.json"
 

@@ -12,6 +12,14 @@ from pathlib import Path
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _strip_setup_mode(monkeypatch):
+    """Hooks exit 0 on ATELIER_SETUP_MODE=1, so a suite run from a setup-mode
+    session would pass every block test vacuously (or fail every one that
+    expects exit 2). Tests that exercise the bypass set it explicitly."""
+    monkeypatch.delenv("ATELIER_SETUP_MODE", raising=False)
+
+
 # ── Project Paths ────────────────────────────────────────────────────────
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

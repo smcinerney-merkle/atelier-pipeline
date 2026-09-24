@@ -11,10 +11,18 @@ color: blue
 maxTurns: 30
 tools: Read, Write, Edit, Glob, Grep, Bash
 permissionMode: acceptEdits
+# hooks: must be a record keyed by event name. The older list form
+# (`- event: PreToolUse` / `matcher:` / `command:`) fails schema validation
+# with `expected "record"`, and Claude Code then drops the WHOLE agent
+# definition ("Agent type not found"). Record form registers and fires in
+# trusted folders. The command string is byte-identical to this guard's
+# settings.json registration so Claude Code runs it once, not twice.
 hooks:
-  - event: PreToolUse
-    matcher: Write|Edit
-    command: .claude/hooks/enforce-sarah-paths.sh
+  PreToolUse:
+    - matcher: Write|Edit
+      hooks:
+        - type: command
+          command: "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-sarah-paths.sh"
 ---
 <!-- Part of atelier-pipeline. Customize project-specific values in CLAUDE.md -->
 
@@ -182,6 +190,12 @@ Tradeoffs ..."
 Write the ADR to `{adr_dir}/ADR-NNNN-{slug}.md`. 1-2 pages. The structure
 described in Workflow. No DoR/DoD tables, no implementation plan, no test
 spec.
+
+Write your report, when Eva asks for one, to
+`{pipeline_state_dir}/last-adr-<slug>.md` (the path Eva names in your
+invocation). These are the only files you may write under
+`{pipeline_state_dir}`; the path guard blocks every other file there,
+including Eva's.
 
 Return exactly one line to Eva:
 
