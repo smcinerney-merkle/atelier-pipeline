@@ -190,3 +190,24 @@ hook_lib_emit_deny() {
 hook_lib_emit_allow() {
   printf '{"decision":"allow"}\n'
 }
+
+# ─── hook_lib_agent_personas ──────────────────────────────────────────────────
+#
+# Echoes the canonical list of known persona base types, space-separated on
+# one line. Single source of truth: any guard that needs the full persona
+# roster (e.g. the OVERLAP check in enforce-spawn-name.sh, G-142) reads it
+# from here instead of keeping its own copy. Add a new persona here only --
+# do not hand-maintain a second list in a calling hook.
+#
+# NOTE: this is deliberately a different list from the brain-capture
+# allowlist in enforce-brain-capture-pending.sh (which excludes poirot,
+# sherlock, sentinel, scout, distillator by design -- see that script's
+# header). Do not point that allowlist at this function.
+#
+# Usage:
+#   PERSONAS=($(hook_lib_agent_personas))
+#   base=$(hook_lib_agent_base_type "$NAME" "$SUBAGENT_TYPE" "${PERSONAS[@]}")
+
+hook_lib_agent_personas() {
+  printf '%s\n' "colby sarah agatha ellis robert robert-spec sable sable-ux investigator poirot sherlock distillator sentinel scout synthesis eva"
+}

@@ -168,6 +168,22 @@ See `{config_dir}/references/invocation-templates.md` for detailed examples per 
 
 </protocol>
 
+<protocol id="instance-naming">
+
+### Instance Naming Convention (mandatory)
+
+When Eva passes a `name` to the Agent tool (e.g. `Agent({name: "colby-u10-tiebreak", subagent_type: "colby"})`), the name **MUST** be `<subagent_type>-<suffix>` or exactly `<subagent_type>`. (A spawn with no `name` at all -- unnamed -- is a separate, unaffected case; see the last paragraph below.) `enforce-spawn-name.sh` enforces this mechanically (PreToolUse on Agent, no `if` -- G-142): a name that doesn't match its declared `subagent_type` is refused before the spawn happens.
+
+The **PreToolUse tool-call payload for the Agent tool itself** -- not only the later `SubagentStop` event -- carries the instance name: `tool_input.name` alongside `tool_input.subagent_type`. Every downstream hook that inspects an agent identity after the spawn (the Ellis-only git guard, Colby's path guard, `hook_lib_agent_type_matches` in `hook-lib.sh`) sees the NAME as `agent_type`, not the registered `subagent_type` -- there is no `subagent_type` field on those later events at all. A gate matching by prefix against the name (per `hook_lib_agent_type_matches`) has no way to tell an off-convention name from a legitimate one -- it silently never fires for that instance: no error, no warning. This is exactly the failure `enforce-spawn-name.sh` closes: it validates the name against the declared `subagent_type` at spawn time, before any downstream gate ever has to guess.
+
+`enforce-spawn-name.sh` also refuses OVERLAP: a name whose longest-matching persona prefix is more specific than its own declared `subagent_type` (e.g. `subagent_type: "sable"` with `name: "sable-ux-1"`) is refused, even though the name starts with `sable-`. A read-only reviewer must not be spawned under a name that makes it look like the producer variant to a downstream guard.
+
+Named Poirot instances are `investigator-<suffix>` -- Poirot's registered `subagent_type` is `investigator`, not `poirot`. Friction's `poirot-segment` example (a name sharing Poirot's common name but not its `subagent_type` prefix) is now a **refused spawn** under this convention, not a live counter-example to work around.
+
+Unnamed spawns (no `name` passed to the Agent tool) are unaffected -- this convention, and `enforce-spawn-name.sh`, only apply when a `name` is present.
+
+</protocol>
+
 <protocol id="sendmessage-resume">
 
 ## In-Session Resume (Sarah and Poirot Only)

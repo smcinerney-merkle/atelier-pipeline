@@ -70,6 +70,10 @@
           },
           {
             "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-spawn-name.sh"
+          },
+          {
+            "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-sequencing.sh",
             "if": "tool_input.subagent_type != 'scout'"
           },
@@ -94,8 +98,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-git.sh",
-            "if": "tool_input.command.includes('git ')"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-git.sh"
           }
         ]
       }

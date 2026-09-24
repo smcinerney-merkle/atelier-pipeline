@@ -28,6 +28,7 @@ optional and must be installed for the pipeline to function correctly.
 | `source/claude/hooks/prompt-compact-advisory.sh` | `.claude/hooks/prompt-compact-advisory.sh` | Wave-boundary compaction advisory (SubagentStop) |
 | `source/claude/hooks/prompt-brain-capture-reminder.sh` | `.claude/hooks/prompt-brain-capture-reminder.sh` | Soft prompt reminder when brain capture is pending — fires before enforce-brain-capture-gate.sh so Eva sees guidance before the hard block (PreToolUse Agent, Prompt) |
 | `source/claude/hooks/enforce-brain-capture-gate.sh` | `.claude/hooks/enforce-brain-capture-gate.sh` | Blocks Agent invocations when a brain capture is pending — fires first in the Agent PreToolUse chain, before enforce-sequencing.sh (ADR-0053) |
+| `source/claude/hooks/enforce-spawn-name.sh` | `.claude/hooks/enforce-spawn-name.sh` | Blocks a named Agent spawn whose name does not match its subagent_type (G-142) — fires second in the Agent PreToolUse chain, right after enforce-brain-capture-gate.sh; no `if` conditional |
 | `source/claude/hooks/enforce-brain-capture-pending.sh` | `.claude/hooks/enforce-brain-capture-pending.sh` | Writes .pending-brain-capture.json marker when an allowlisted agent stops (SubagentStop, ADR-0053) |
 | `source/claude/hooks/clear-brain-capture-pending.sh` | `.claude/hooks/clear-brain-capture-pending.sh` | Deletes .pending-brain-capture.json when agent_capture succeeds — suffix-matches *__agent_capture to support any plugin prefix (PostToolUse, ADR-0053) |
 | `source/shared/agents/brain-extractor.md` | `.claude/agents/brain-extractor.md` | Brain knowledge extractor agent (assembled with frontmatter overlay below) |
@@ -157,11 +158,11 @@ file already exists. Add this hooks section:
       },
       {
         "matcher": "Agent",
-        "hooks": [{"type": "prompt", "prompt": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prompt-brain-capture-reminder.sh"}, {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-brain-capture-gate.sh"}, {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-sequencing.sh"}, {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-pipeline-activation.sh"}, {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-scout-swarm.sh", "if": "tool_input.subagent_type == 'sarah' || tool_input.subagent_type == 'colby' || tool_input.subagent_type == 'scout'"}, {"type": "prompt", "prompt": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prompt-brain-prefetch.sh", "if": "tool_input.subagent_type == 'sarah' || tool_input.subagent_type == 'colby' || tool_input.subagent_type == 'poirot'"}]
+        "hooks": [{"type": "prompt", "prompt": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prompt-brain-capture-reminder.sh"}, {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-brain-capture-gate.sh"}, {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-spawn-name.sh"}, {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-sequencing.sh"}, {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-pipeline-activation.sh"}, {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-scout-swarm.sh", "if": "tool_input.subagent_type == 'sarah' || tool_input.subagent_type == 'colby' || tool_input.subagent_type == 'scout'"}, {"type": "prompt", "prompt": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prompt-brain-prefetch.sh", "if": "tool_input.subagent_type == 'sarah' || tool_input.subagent_type == 'colby' || tool_input.subagent_type == 'poirot'"}]
       },
       {
         "matcher": "Bash",
-        "hooks": [{"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-git.sh", "if": "tool_input.command.includes('git ')"}]
+        "hooks": [{"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-git.sh"}]
       }
     ],
     "SubagentStart": [
@@ -242,7 +243,7 @@ sits under `Write|Edit` because her script checks only those tools.
 If `jq` is not available, tell the user: "Install jq for pipeline enforcement hooks:
 `brew install jq` (macOS) or `apt install jq` (Linux)."
 
-**Total with hooks: 38 mandatory files across 7 directories.**
+**Total with hooks: 39 mandatory files across 7 directories.**
 
 #### Custom Agent Discovery
 

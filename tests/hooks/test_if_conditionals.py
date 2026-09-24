@@ -13,7 +13,20 @@ from conftest import (
 )
 
 
-def test_T_0020_001_enforce_git_if_field():
+def test_T_0020_001_enforce_git_has_no_if_field():
+    """G-107/G-143 supersedes: the `if` conditional this test used to require
+    (`tool_input.command.includes('git ')`) never fired. A probe on CLI
+    2.1.282 (Eva, this session) confirmed the harness's `if` evaluates a
+    narrow permission-rule form, not arbitrary JS: `Bash(git *)` fires,
+    but a JS-expression `if` like this one never does, for Bash or Agent.
+    That meant enforce-git.sh's installed registration never ran the
+    script at all -- an install-wide silent no-op, not a performance
+    optimization. The `if` has been removed from every registration copy
+    (.claude/settings.json, skills/pipeline-setup/hooks.md,
+    .cursor-plugin/skills/pipeline-setup/hooks.md); the script now runs on
+    every Bash call and relies on its own internal TOOL_NAME/COMMAND
+    checks to stay cheap. This test now asserts the `if` field is ABSENT,
+    the inverse of what it asserted before."""
     settings = json.loads((PROJECT_ROOT / ".claude" / "settings.json").read_text())
     bash_matchers = [e for e in settings["hooks"]["PreToolUse"] if e.get("matcher") == "Bash"]
     git_hooks = [
@@ -21,10 +34,11 @@ def test_T_0020_001_enforce_git_if_field():
         if "enforce-git.sh" in h.get("command", "")
     ]
     assert len(git_hooks) >= 1
-    if_val = git_hooks[0].get("if", "")
-    assert if_val
-    assert "tool_input.command" in if_val
-    assert "git " in if_val
+    assert "if" not in git_hooks[0], (
+        f"enforce-git.sh registration must have no `if` field (G-107/G-143 -- "
+        f"the harness's `if` evaluator never matched it, so the script never "
+        f"ran). Found: {git_hooks[0]!r}"
+    )
 
 
 # ADR-0025 supersedes: warn-dor-dod.sh deleted from SubagentStop; replaced by session-hydrate.sh in SessionStart (ADR-0025 R11, R9)
@@ -88,7 +102,12 @@ def test_T_0020_006_regression_enforce_pipeline_activation(hook_env):
     assert "BLOCKED" in r.stdout
 
 
-def test_T_0020_007_skill_md_if_values():
+def test_T_0020_007_skill_md_and_settings_agree_no_if_for_enforce_git():
+    """G-107/G-143 supersedes: this test used to assert the two copies of
+    enforce-git.sh's `if` value matched each other. The `if` never fired on
+    either copy (see test_T_0020_001's docstring) and has been removed from
+    both. This test now asserts parity on absence instead of parity on a
+    dead value."""
     settings_file = PROJECT_ROOT / ".claude" / "settings.json"
     # Hook manifest (including JSON template with if conditions) moved to hooks.md per ADR-0058.
     hooks_file = PROJECT_ROOT / "skills" / "pipeline-setup" / "hooks.md"
@@ -98,15 +117,14 @@ def test_T_0020_007_skill_md_if_values():
     settings = json.loads(settings_file.read_text())
     hooks_text = hooks_file.read_text()
 
-    # Extract if value for enforce-git.sh
     bash_matchers = [e for e in settings["hooks"]["PreToolUse"] if e.get("matcher") == "Bash"]
     git_hooks = [
         h for m in bash_matchers for h in m.get("hooks", [])
         if "enforce-git.sh" in h.get("command", "")
     ]
-    git_if = git_hooks[0].get("if", "")
-    assert git_if
-    assert git_if in hooks_text
+    assert "if" not in git_hooks[0]
+    assert '"enforce-git.sh", "if"' not in hooks_text
+    assert "enforce-git.sh\"}]" in hooks_text or '"enforce-git.sh"}]' in hooks_text
 
     # warn-dor-dod.sh removed in ADR-0025; session-hydrate.sh (SessionStart) has no if condition
 
@@ -117,7 +135,9 @@ def test_T_0020_008_enforce_git_direct_call(hook_env):
     assert "BLOCKED" in r.stdout
 
 
-def test_T_0020_009_enforce_git_if_field_type():
+def test_T_0020_009_enforce_git_has_no_if_field_at_all():
+    """G-107/G-143 supersedes: see test_T_0020_001's docstring. `if_val` must
+    now be None (key absent), not a non-empty string."""
     settings = json.loads((PROJECT_ROOT / ".claude" / "settings.json").read_text())
     bash_matchers = [e for e in settings["hooks"]["PreToolUse"] if e.get("matcher") == "Bash"]
     git_hooks = [
@@ -125,8 +145,7 @@ def test_T_0020_009_enforce_git_if_field_type():
         if "enforce-git.sh" in h.get("command", "")
     ]
     if_val = git_hooks[0].get("if")
-    assert isinstance(if_val, str)
-    assert len(if_val) > 0
+    assert if_val is None
 
 
 # ADR-0025 supersedes: warn-dor-dod.sh deleted from SubagentStop; SessionStart carries session-hydrate.sh instead (ADR-0025 R11, R9)

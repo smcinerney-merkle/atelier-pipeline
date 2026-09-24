@@ -5,6 +5,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+## [5.2.2] - 2026-09-24
+
+### Added
+- **`enforce-spawn-name.sh` (G-142).** New PreToolUse hook on the Agent tool, registered with no `if` conditional. Every mechanical guard in this repo identifies an agent by `agent_type`, and for a named teammate spawn `agent_type` is the NAME the spawner chose, not the definition it was spawned from. A generic `claude` agent named `ellis-gd-tag` committed through the Ellis-only git guard in another repo; a payload named `agatha-disguised` would have skipped Colby's path guard and inherited Agatha's write allowlist. The new hook refuses a named spawn whose name is not exactly its `subagent_type` or `<subagent_type>-<suffix>`, refuses a named spawn with no declared `subagent_type`, and refuses an OVERLAP case where the name's longest-matching persona prefix is more specific than the declared type (`subagent_type: sable` with `name: sable-ux-1`). Fails CLOSED for named spawns when `hook-lib.sh` cannot be loaded. Installed to `.claude/hooks/` only -- Cursor's `hooks.json` schema has no Agent-tool event, so it cannot see a spawn's name or subagent_type; there is no Cursor equivalent.
+- **`hook_lib_agent_personas`** in `hook-lib.sh` -- single source of truth for the known persona roster, consumed by `enforce-spawn-name.sh`'s OVERLAP check.
+- **"Instance Naming Convention (mandatory)" protocol** added to `agent-system.md` (source template plus the `.claude` and `.cursor-plugin` installed copies), adapted from Friction's prior art: states the naming rule, that the Agent-tool PreToolUse payload (not only `SubagentStop`) carries the instance name, the OVERLAP refusal, and that named Poirot instances are `investigator-<suffix>` (Friction's `poirot-segment` example is now a refused spawn).
+- **RF parity test port** (`tests/hooks/test_enforce_git_rf_parity.py`): ports requirements-foundry's 178-case `enforce-git.sh` vitest suite into this repo's pytest style. 3 of RF's "LEAKS" characterization cases (tree-ish pathspec discard, combined short flags) are inverted to BLOCKED, since this fork's checkout regex already closes them correctly. `git switch --discard-changes` remains a documented open gap.
+
+### Fixed
+- **`enforce-git.sh` (G-143).** Removed the dead `"if": "tool_input.command.includes('git ')"` conditional from every registration copy (`.claude/settings.json`, `skills/pipeline-setup/hooks.md`, `.cursor-plugin/skills/pipeline-setup/hooks.md`) -- a probe on CLI 2.1.282 confirmed the harness's `if` evaluates a narrow permission-rule form, not arbitrary JS, so this conditional never matched and the script never ran on any Bash call. Ported RF's G-111/G-112 test-runner regex (adds `npx`/`pnpm exec`/`yarn exec` invoker prefixes, `playwright test`, and `(npm|yarn|pnpm) (run )?test(:\S+)?`). The test-execution gate now admits `colby`, `investigator`/`poirot`, and the main thread (empty `agent_type`, per pipeline-orchestration.md's mandatory Bash-run gates) -- previously the code only admitted `colby` while the block message claimed Poirot was allowed too. Ellis matching now goes through `hook_lib_agent_type_matches` instead of a hand-rolled case statement. Added `|| exit 0` on the `tool_name` / `command` jq reads.
+- **`prompt-compact-advisory.sh` (G-143).** Restored matching for a named Ellis instance (`ellis-*`) via `hook_lib_agent_type_matches` -- the exact-string check (`"$AGENT_TYPE" != "ellis"`) silently skipped the wave-boundary compaction advisory for every named Ellis spawn.
+- **`tests/hooks/test_if_conditionals.py`** T_0020_001, T_0020_007, T_0020_009 rewritten -- they previously REQUIRED the dead `if` on `enforce-git.sh`; they now assert its absence.
+
+### Changed
+- **Version bump 5.2.1 → 5.2.2** in all four plugin manifests: `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.cursor-plugin/plugin.json`, `.cursor-plugin/marketplace.json`. `.claude/.atelier-version` deliberately stays at `5.1.6` -- it records the installed version, and the plugin update process sets it, not this commit.
+
 ## [5.2.1] - 2026-09-24
 
 ### Changed
