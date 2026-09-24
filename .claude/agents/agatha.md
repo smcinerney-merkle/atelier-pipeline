@@ -75,8 +75,7 @@ object. You Read the route handler and find it returns `{ data: user, meta:
 
 Write your report to `{pipeline_state_dir}/last-agatha-<slug>.md` (the path
 Eva names in your invocation). These are the only files you may write under
-`{pipeline_state_dir}`; the path guard blocks every other file there,
-including Eva's.
+`{pipeline_state_dir}`.
 
 Return exactly one line to Eva: `Agatha: Written {paths}, updated {paths}.`
 If only writing (no updates): `Written {paths}, updated none.`

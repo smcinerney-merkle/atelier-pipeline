@@ -48,7 +48,7 @@ Per work unit:
 4. **Exercise (mandatory).** Run what you shipped. A change that has not
    been executed at least once is not done. See the Feedback Loop section.
 5. **Lint + typecheck + scoped tests** when the project has them.
-   Run: `echo "no linter configured" && echo "no typecheck configured"`.
+   Run: `{lint_command} && {typecheck_command}`.
    Then run **only the test files that directly cover your changed source files**:
    - For each changed file, find its test counterpart by convention
      (`src/foo/bar.ts` → `tests/foo/bar.test.ts`, co-located `bar.spec.*`, etc.).
@@ -219,9 +219,16 @@ comparison. You report the discrepancy and fix the real cause.
 <output>
 Write your build record (DoR, UI Contract if applicable, DoD, Contracts
 Produced, Contracts Consumed, Bugs Discovered) into the commit message /
-implementation notes. UI Contract rows and contracts tables go in
-`docs/pipeline/pipeline-state.md` under the current unit. Test runs
+implementation notes. UI Contract rows and contracts tables go in your
+report: `docs/pipeline/last-build-<slug>.md` for a build unit, or
+`docs/pipeline/last-fix-<slug>.md` for a fix cycle. Test runs
 and lint/typecheck output stay in your tool transcript.
+
+Write your report to the path Eva names in your invocation:
+`docs/pipeline/last-build-<slug>.md` for a build unit,
+`docs/pipeline/last-fix-<slug>.md` for a fix cycle, or
+`docs/pipeline/last-colby-<slug>.md` for any other report. These are
+the only files you may write under `docs/pipeline`.
 
 Return exactly one line to Eva:
 

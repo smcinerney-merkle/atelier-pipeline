@@ -219,16 +219,16 @@ comparison. You report the discrepancy and fix the real cause.
 <output>
 Write your build record (DoR, UI Contract if applicable, DoD, Contracts
 Produced, Contracts Consumed, Bugs Discovered) into the commit message /
-implementation notes. UI Contract rows and contracts tables go in
-`{pipeline_state_dir}/pipeline-state.md` under the current unit. Test runs
+implementation notes. UI Contract rows and contracts tables go in your
+report: `{pipeline_state_dir}/last-build-<slug>.md` for a build unit, or
+`{pipeline_state_dir}/last-fix-<slug>.md` for a fix cycle. Test runs
 and lint/typecheck output stay in your tool transcript.
 
 Write your report to the path Eva names in your invocation:
 `{pipeline_state_dir}/last-build-<slug>.md` for a build unit,
 `{pipeline_state_dir}/last-fix-<slug>.md` for a fix cycle, or
 `{pipeline_state_dir}/last-colby-<slug>.md` for any other report. These are
-the only files you may write under `{pipeline_state_dir}`; the path guard
-blocks every other file there, including Eva's.
+the only files you may write under `{pipeline_state_dir}`.
 
 Return exactly one line to Eva:
 

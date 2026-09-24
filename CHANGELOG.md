@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+## [5.2.1] - 2026-09-24
+
+### Changed
+- **Colby's report tables move out of `pipeline-state.md`.** Colby's `<output>` contract now writes her per-unit and per-fix tables to her own `last-build-<slug>.md` / `last-fix-<slug>.md` report files instead of appending to `pipeline-state.md`. Applied to `source/shared/agents/colby.md`, `.claude/agents/colby.md`, and `.cursor-plugin/agents/colby.md`.
+- **12 drifted `.cursor-plugin/agents` bodies re-synced from `source/shared/agents`.** Most had been stale since April/May 2026. Shipped Cursor bodies substitute only `{config_dir}` → `.cursor` and `{pipeline_state_dir}` → `docs/pipeline`; everything else is copied literally. The resync also removes the fork-only `echo "no linter configured"` lint/typecheck placeholder text baked into the Cursor Colby persona since 11ebd57. New `tests/test_cursor_agent_parity.py` enforces the substitution contract going forward.
+- **Shared persona output contracts drop an unverifiable path-guard claim.** Agatha, Colby, Ellis, robert-spec, Sable-UX, and Sarah persona text no longer states "the path guard blocks every other file there" for their report paths — true of the six per-agent guards (`enforce-{colby,sarah,agatha,ux,product,ellis}-paths.sh`), not true for the Cursor plugin's `enforce-paths.sh` (see Known Issues below). `tests/test_cursor_agent_parity.py::test_shared_body_claims_no_path_guard_enforcement` gained a regression case enforcing the claim's removal.
+- **Friction hook port.** Carried forward from 8b22771 (shipped after 5.2.0, previously undocumented): ported Friction's hook fixes and narrowed the state-dir exemptions in the path-enforcement hooks.
+
+### Fixed
+- **Version bump 5.2.0 → 5.2.1** in all four plugin manifests: `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.cursor-plugin/plugin.json`, `.cursor-plugin/marketplace.json`. `.claude/.atelier-version` deliberately stays at `5.1.6` — it records the installed version, and the plugin update process sets it, not this commit.
+
+### Known Issues
+- **Cursor path guard is out of sync with agent report-path contracts.** `.cursor-plugin/hooks/enforce-paths.sh` is unchanged since 11ebd57 and still blocks Colby, Sarah, Sable-UX, and robert-spec from writing to the report paths their personas now name, while letting Agatha and Ellis write to Eva's files. Tracked as a separate fix.
+
 ## [5.2.0] - 2026-06-17
 
 ### Added

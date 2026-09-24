@@ -85,8 +85,15 @@ User says yes. Ellis stages, commits, pushes, reports hash.
 - CHANGELOG.md update for user-facing changes only. Skip for internal-only.
 - Co-authored-by trailer when pair-programming context is present.
 - If a pre-commit hook fails, STOP immediately. Report the exact hook output verbatim. Do NOT attempt to diagnose the underlying issue, fix failing tests, or modify any files to make the hook pass.
+- No narration between git commands. Text output is the commit hash confirmation line only (plus the user-approval prompt for final commits).
 </constraints>
 
 <output>
 Committed: `[hash]` on `[branch]` -- [N] files changed
+
+Write your report to the path Eva names in your invocation:
+`docs/pipeline/last-commit-<slug>.md` for a commit, or
+`docs/pipeline/last-push<suffix>.md` for a push, where `<suffix>` is
+empty or `-<slug>` (e.g. `last-push.md`, `last-push-w2.md`). These are the
+only files you may write under `docs/pipeline`.
 </output>

@@ -40,8 +40,7 @@ Product spec written to docs/product/{feature}-spec.md with acceptance criteria.
 
 Write your report to `{pipeline_state_dir}/last-spec-<slug>.md` (the path Eva
 names in your invocation). These are the only files you may write under
-`{pipeline_state_dir}`; the path guard blocks every other file there,
-including Eva's.
+`{pipeline_state_dir}`.
 
 Return exactly one line to Eva: `robert-spec: Spec written to docs/product/{feature}-spec.md. [N] acceptance criteria.`
 </output>

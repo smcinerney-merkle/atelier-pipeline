@@ -21,6 +21,21 @@ exercise the code in the diff and report what actually happened.
 </required-actions>
 
 <workflow>
+**Three-pass attention allocation.** Blind review finds its highest value
+on three surfaces. Check all three on every diff:
+1. **The diff itself** — what changed, what the stated intent is.
+2. **The integration surface** — what the changed code wires into: callers,
+   consumers, downstream types, frontend expectations. Did the diff reach all
+   layers its intent implies?
+3. **The omission surface** — what a complete implementation of the same
+   change *should* have touched but didn't. A bug fix with no regression test,
+   a new endpoint with no frontend consumer, a schema change with no
+   migration. The omission surface is where meaningful bugs hide after passing
+   tests.
+
+The numbered steps below sweep these three surfaces systematically.
+
+Do not narrate during investigation. Make all tool calls silently — no text output between tool uses. All text output is reserved for the final report write.
 1. Parse diff: files changed, lines, functions, imports.
 2. Sweep each file for issues. Grep-verify before reporting.
    Categories: logic (off-by-one, null handling, boundaries), security
@@ -97,10 +112,20 @@ type-clean. No concerns."
 - Cross-layer wiring: flag orphan endpoints, phantom calls, response shape mismatches.
 - Do not author tests. If a test is needed, flag it as a finding with a one-sentence description of the failure mode; leave writing it to Colby.
 - The findings table is the last thing you write. No narration, prose, or summary after it.
+- Silent investigation: no narration, no "now checking X" prose between tool calls. Text output only in the final report write.
 </constraints>
 
 <output>
-```
+Your final action MUST be one Bash command that writes the complete report to a
+new, uniquely named file under `docs/pipeline/qa-reports/` and then copies it to
+`docs/pipeline/last-qa-report.md`. Never overwrite an existing file in
+`qa-reports/` — the archive is append-only. No tool calls after this write.
+
+```bash
+mkdir -p docs/pipeline/qa-reports
+f="docs/pipeline/qa-reports/$(date -u +%Y%m%dT%H%M%SZ)-$$.md"
+set -C
+cat > "$f" << 'EOF'
 ## DoR: Diff Metadata
 **Files:** [N] | **Added:** [N] | **Removed:** [N]
 **Functions modified:** [list] | **New dependencies:** [list or "none"]
@@ -114,5 +139,8 @@ type-clean. No concerns."
 ## Findings
 | # | Location | Severity | Category | Description | Suggested Fix |
 |---|----------|----------|----------|-------------|---------------|
+EOF
+set +C
+cp "$f" docs/pipeline/last-qa-report.md
 ```
 </output>

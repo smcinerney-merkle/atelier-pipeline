@@ -15,6 +15,7 @@ Covers:
   - frontmatter command == settings-template command (single run, not double)
   - enforcement-config.json preserve-on-reinstall snippet in hooks.md
   - enforce-colby-stop-verify.sh named-instance match (3d760f5)
+  - Colby <output> routes contracts tables to her report, not pipeline-state.md
 """
 
 import json
@@ -699,3 +700,22 @@ def test_contract_matches_guard(owner, tree):
     contract = _contract_report_patterns(PROJECT_ROOT / tree / f"{owner}.md")
     assert guard == set(REPORT_PREFIXES[owner]), f"{hook} allows {guard}"
     assert contract == guard, f"{tree}/{owner}.md names {contract}, guard allows {guard}"
+
+
+COLBY_COPIES = [
+    "source/shared/agents/colby.md",
+    ".claude/agents/colby.md",
+    ".cursor-plugin/agents/colby.md",
+]
+
+
+@pytest.mark.parametrize("rel", COLBY_COPIES)
+def test_colby_output_keeps_tables_out_of_pipeline_state(rel):
+    lines = (PROJECT_ROOT / rel).read_text().split("\n")
+    start = lines.index("<output>")
+    block = "\n".join(lines[start:lines.index("</output>", start)])
+    assert "pipeline-state.md" not in block, f"{rel} <output> directs a write to pipeline-state.md"
+    assert not re.search(r"contracts tables go in\s+`[^`]*pipeline-state", block, re.I), rel
+    assert re.search(r"contracts tables go in your\s+report:\s+`[^`]*/last-build-<slug>\.md`", block), (
+        f"{rel} <output> does not route tables to last-build-<slug>.md"
+    )

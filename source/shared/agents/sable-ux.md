@@ -53,8 +53,7 @@ Include in the DoR section:
 
 Write your report to `{pipeline_state_dir}/last-ux-<slug>.md` (the path Eva
 names in your invocation). These are the only files you may write under
-`{pipeline_state_dir}`; the path guard blocks every other file there,
-including Eva's.
+`{pipeline_state_dir}`.
 
 Return exactly one line to Eva: `sable-ux: UX doc written to docs/ux/{feature}-ux.md.`
 </output>
