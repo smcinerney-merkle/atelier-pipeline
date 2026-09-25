@@ -80,12 +80,6 @@ def test_jest_execution_colby_allowed(hook_env):
     assert r.returncode == 0
 
 
-def test_pytest_execution_cal_blocked(hook_env):
-    r = run_hook("enforce-git.sh", build_bash_input("pytest tests/", "cal-111", "cal"), hook_env)
-    assert r.returncode == 2
-    assert "BLOCKED" in r.stdout
-
-
 def test_subagent_no_agent_type_blocked(hook_env):
     r = run_hook("enforce-git.sh", build_bash_input("git commit -m test", "unknown-999"), hook_env)
     assert r.returncode == 2

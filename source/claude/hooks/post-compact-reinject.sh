@@ -34,7 +34,7 @@ if ! command -v session_state_dir &>/dev/null; then
   session_state_dir() { echo "$PROJECT_DIR/docs/pipeline"; }
 fi
 
-# Resolve per-worktree state directory (ADR-0032)
+# Resolve in-repo session state directory (ADR-0032, in-repo per G-151)
 STATE_DIR=$(session_state_dir)
 STATE_FILE="$STATE_DIR/pipeline-state.md"
 BRIEF_FILE="$STATE_DIR/context-brief.md"

@@ -158,11 +158,20 @@ G1_QUOTED_ARG_ROWS = [
 # denied exemption to any dotted ref past the first character -- these
 # match `merge --ff-only` / `checkout --track` but were wrongly BLOCKED
 # (rc 2) on the pre-fix3 guard.
-G2_DOTTED_REF_ROWS = [
+#
+# G-151/P1 (operator decision 2026-09-25): `merge --ff-only` is no longer
+# exempt at all -- it is now an ordinary unconditional write verb (a
+# fast-forward merge still moves a branch ref). The two dotted-ref MERGE
+# rows below are FLIPPED from "allowed for colby" to "blocked for colby,
+# allowed for ellis" to match. The dotted-ref CHECKOUT row is unaffected by
+# P1 (checkout --track's own exemption is untouched) and stays allowed for
+# both.
+G2_MERGE_FFONLY_ROWS = [
     "git merge --ff-only v5.2.2",
     "git merge --ff-only origin/release-5.2.3",
-    "git checkout --track origin/v5.2.3",
 ]
+
+G2_CHECKOUT_TRACK_ROW = "git checkout --track origin/v5.2.3"
 
 
 @pytest.mark.parametrize("command", G1_NOARG_ROWS + G1_ATTR_SOURCE_ROWS + G1_QUOTED_ARG_ROWS)
@@ -178,16 +187,30 @@ def test_g147_fix3_g1_row_allowed_for_bare_ellis(hook_env, command):
     assert r.returncode == 0, r.stdout
 
 
-@pytest.mark.parametrize("command", G2_DOTTED_REF_ROWS)
-def test_g147_fix3_g2_row_allowed_for_colby(hook_env, command):
-    """Dotted refs on an already-exempt subcommand -- allowed for colby too."""
+@pytest.mark.parametrize("command", G2_MERGE_FFONLY_ROWS)
+def test_g151_p1_g2_merge_ffonly_row_blocked_for_colby(hook_env, command):
+    """G-151/P1 flip: dotted merge --ff-only refs are no longer exempt --
+    merge is an unconditional write verb now."""
     r = _run(hook_env, command, "colby")
+    assert r.returncode == 2, r.stdout
+    assert "BLOCKED" in r.stdout
+
+
+@pytest.mark.parametrize("command", G2_MERGE_FFONLY_ROWS)
+def test_g151_p1_g2_merge_ffonly_row_allowed_for_ellis(hook_env, command):
+    r = _run(hook_env, command, "ellis")
     assert r.returncode == 0, r.stdout
 
 
-@pytest.mark.parametrize("command", G2_DOTTED_REF_ROWS)
-def test_g147_fix3_g2_row_allowed_for_ellis(hook_env, command):
-    r = _run(hook_env, command, "ellis")
+def test_g147_fix3_g2_checkout_track_row_allowed_for_colby(hook_env):
+    """Dotted ref on an already-exempt checkout --track -- allowed for
+    colby too. Unaffected by the G-151/P1 merge policy flip above."""
+    r = _run(hook_env, G2_CHECKOUT_TRACK_ROW, "colby")
+    assert r.returncode == 0, r.stdout
+
+
+def test_g147_fix3_g2_checkout_track_row_allowed_for_ellis(hook_env):
+    r = _run(hook_env, G2_CHECKOUT_TRACK_ROW, "ellis")
     assert r.returncode == 0, r.stdout
 
 
@@ -355,4 +378,74 @@ def test_g147_pass4_r2_newline_in_quoted_value_leaks_documented_gap(hook_env, co
     refused some other way) once this hook's line-oriented matching is
     replaced with something that inspects the whole payload, not per line."""
     r = _run(hook_env, command, "colby")
+    assert r.returncode == 0, r.stdout
+
+
+# ── G-151 switch-flag fix (2026-09-25, operator decision): the post-P2/P5
+# guard over-blocked the non-destructive flag-led `switch` forms the
+# operator explicitly kept allowed for their `checkout` counterparts --
+# `switch -c`, `switch --create`, `switch --detach <ref>` and `switch -`
+# (switch to previous branch) are the safe, non-destructive siblings of
+# `checkout -b`/`-t`/`--track`/`--detach`, and the operator is redirecting
+# agents to `git switch` as the checkout replacement. GIT_WRITE_EXEMPT's
+# switch arm now admits a leading -c/--create/--detach flag (mirroring
+# checkout's own three-flag alternation) and admits a lone `-` as a
+# trailing token (the previous-branch target), alongside the pre-existing
+# plain `switch <branch>` allowance. See docs/pipeline/last-build-g151-git.md
+# "Fix: switch flag forms" for the before/after table.
+SWITCH_FLAG_ALLOWED_ROWS = [
+    "git switch -c new",
+    "git switch --create new",
+    "git switch -c new origin/x",
+    "git switch --detach main",
+    "git switch -",
+]
+
+
+@pytest.mark.parametrize("command", SWITCH_FLAG_ALLOWED_ROWS)
+def test_g151_switch_flag_row_allowed_for_colby(hook_env, command):
+    r = _run(hook_env, command, "colby")
+    assert r.returncode == 0, r.stdout
+
+
+@pytest.mark.parametrize("command", SWITCH_FLAG_ALLOWED_ROWS)
+def test_g151_switch_flag_row_allowed_for_main_thread(hook_env, command):
+    r = _run(hook_env, command, None)
+    assert r.returncode == 0, r.stdout
+
+
+@pytest.mark.parametrize("command", SWITCH_FLAG_ALLOWED_ROWS)
+def test_g151_switch_flag_row_allowed_for_sarah(hook_env, command):
+    r = _run(hook_env, command, "sarah")
+    assert r.returncode == 0, r.stdout
+
+
+# Kept blocked: -f/--force, --discard-changes (G-145), -C/--force-create,
+# -m/--merge, --orphan -- none of these six is in the switch arm's leading
+# alternation (-c|--create|--detach), so each falls through to the
+# unconditional switch write-verb block unchanged.
+SWITCH_FLAG_BLOCKED_ROWS = [
+    "git switch -f main",
+    "git switch --force main",
+    "git switch --discard-changes main",
+    "git switch -C name",
+    "git switch --force-create name",
+    "git switch -m",
+    "git switch --merge",
+    "git switch --orphan new",
+    'git switch --detach "-f"',
+    "git switch -c x && git commit -m y",
+]
+
+
+@pytest.mark.parametrize("command", SWITCH_FLAG_BLOCKED_ROWS)
+def test_g151_switch_flag_row_blocked_for_colby(hook_env, command):
+    r = _run(hook_env, command, "colby")
+    assert r.returncode == 2, r.stdout
+    assert "BLOCKED" in r.stdout
+
+
+@pytest.mark.parametrize("command", SWITCH_FLAG_BLOCKED_ROWS)
+def test_g151_switch_flag_row_allowed_for_ellis(hook_env, command):
+    r = _run(hook_env, command, "ellis-g151")
     assert r.returncode == 0, r.stdout

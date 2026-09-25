@@ -5,6 +5,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+## [5.2.4] - 2026-09-25
+
+### Fixed
+- **State directory now resolves in-repo (portal `bd76d3a`).** `session_state_dir()` in `pipeline-state-path.sh` used to return `~/.atelier/pipeline/{slug}/{hash}/`, an out-of-repo path nothing ever wrote to. Session-boot, post-compact-reinject, and the compact advisory had been reading an empty `~/.atelier` directory since 5.1.8 (G-151). The primary path is now `{project_root}/docs/pipeline`; the dead out-of-repo block and its `mkdir -p` are removed rather than kept for byte-parity with the portal, since nothing reachable ever writes there.
+
+### Changed
+- **`git merge --ff-only` is blocked again for non-Ellis agents.** This reverses the allowance 5.2.3 inherited from Guru's list — merge, fast-forward-only or not, is still a write the guard exists to gate.
+- **`git checkout` with any positional operand is blocked.** `-b`, `-t`/`--track`, `--detach`, and `--help` stay allowed. Agent instructions across `branch-lifecycle.md` and `worktree-isolation.md` (source + both installed copies) now say `git switch <branch>` in place of `git checkout <branch>`.
+- **`git switch`'s own non-destructive flag forms are allowed, not blocked outright.** `git switch -c`/`--create`, `--detach`, and a bare `git switch -` stay allowed for every agent, matching the checkout `-b`/`-t`/`--track`/`--detach` forms already kept allowed above. `-f`/`--force`, `--discard-changes`, `-C`/`--force-create`, `-m`/`--merge`, and `--orphan` are still blocked.
+- **`git stash show` / `git stash list` are allowed in every form** — read-only for everyone regardless of trailing arguments.
+- **`git switch --discard-changes` is now blocked**, closing G-145 (a documented, unfixed leak carried since 5.2.3) — same class as `-f`/`--force`.
+- **New blocked forms:** brace groups (`{ git commit -m x; }`), `gc`, `prune`, `reflog expire`/`reflog delete`, `filter-branch`/`filter-repo`, and command substitution (`$(git ...)`).
+- **A git-shaped mention inside a quoted string no longer trips the guard** — `grep`/`awk`/`echo` output containing the literal text `git commit` (etc.) inside quotes is no longer blocked.
+- **The test-runner half of `enforce-git.sh` is deleted, not narrowed** (portal ADR-0021 Question A). Test runners (pytest, jest, vitest, `npm`/`yarn`/`pnpm test`, etc.) are now allowed for every agent, closing G-107 (the guard's `if` conditional never fired to begin with), G-112 (npx/pnpm exec/`npm run test:*` coverage gaps in the deleted regex), and G-114 (main-thread/Poirot identity gaps in the deleted allowlist). Their owning tests are deleted along with the guard, not skipped.
+- **The portal's 140-case `enforce-git.sh` behaviour corpus is ported as pytest data** (`tests/hooks/data/portal_enforce_git_corpus.json` + `tests/hooks/test_enforce_git_portal_corpus.py`). 147/148 is the accepted match against the portal's full source corpus — the one outlier is the portal's own FINAL-pattern provenance test, which pins the portal's own regex constant rather than this fork's behavior, and realigns only when the portal updates that constant at its own re-sync.
+- **Settings template: `prompt-compact-advisory.sh` registers with no `if`** — the script already self-filters via `hook_lib_agent_type_matches`, so the conditional was dead weight, same class as G-107/G-143. **The brain-extractor `SubagentStop` registration is removed** — the agent hasn't existed since ADR-0053 replaced it with the three-hook mechanical capture gate. **`prompt-eva-path-reminder.sh` reads `.agent_type`** (falling back to `.tool_input.subagent_type`) instead of `.agent_id`, which is always empty on the `PreToolUse` payload this hook actually sees.
+- **`agent-system.md`: agents granted the mybrain tools do call `agent_capture`** (portal `c51015f` wording) — the prior text ("Eva curates — agents do not call `agent_capture` themselves") was false for every persona using a `disallowedTools:` denylist, which inherits `agent_capture` by default unless explicitly excluded.
+- **Model aliases replace pinned IDs in `invocation-templates.md` and `pipeline-phases.md`.** `synthesis` and `scout` frontmatter declare the bare logical alias (`sonnet`, `haiku`), never a pinned ID; the reference docs now say so instead of naming a stale `claude-sonnet-4-6` / `claude-haiku-4-5-20251001` fallthrough.
+- **`pipeline-config.json` gets a missing-key merge on re-install**, mirroring the existing `enforcement-config.json` mechanism: template keys the installed file lacks are added with the template's value, existing keys are never touched, and `agent_roster` is never added — its absence is the ADR-0060 signal the setup skill's Step 1f roster questions read. New `scripts/merge-pipeline-config.sh`, invoked by the setup skill's state file guard after all of Step 1's interactive questions (including Step 1f) have already run.
+- **Version bump 5.2.3 → 5.2.4** in all four plugin manifests: `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.cursor-plugin/plugin.json`, `.cursor-plugin/marketplace.json`. `.claude/.atelier-version` deliberately stays at `5.1.6` — it records the installed version, and the plugin update process sets it, not this commit.
+
+### Known Issues
+- **An escaped quote inside a quoted `GIT_SHELL_WORD` run still leaks (R1)** and **a literal newline inside a quoted option value still leaks (R2)** — both carried forward unchanged from 5.2.3, `GIT_SHELL_WORD` itself untouched by this release.
+- **A git alias still leaks past the write-verb guard** — `enforce-git.sh` matches literal verb spellings only; defining an alias for a blocked verb on the same command line (e.g. `git -c alias.ci=commit ci -m x`) still returns rc 0 for a non-Ellis agent. Carried forward unchanged from 5.2.3.
+- **`git branch -D` is allowed by every guard.** Pre-existing, not in scope for this release.
+
 ## [5.2.3] - 2026-09-25
 
 ### Fixed

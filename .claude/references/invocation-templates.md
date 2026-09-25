@@ -151,7 +151,7 @@ Does NOT form opinions. Filters, ranks, trims only.
 **Invocation:** `Agent(subagent_type: "synthesis", effort: "low")` with the
 synthesis output-shape prompt embedded inline. The `model` parameter is
 omitted; resolution falls through to the synthesis frontmatter
-(`claude-sonnet-4-6`) per ADR-0048.
+(`sonnet`) per ADR-0048.
 
 Block populated: `<research-brief>` (Sarah) / `<colby-context>` (Colby) / `<qa-evidence>` (Poirot).
 
@@ -203,7 +203,7 @@ One scout per artifact category. Eva copies this template verbatim into every sc
 
 **Invocation:** `Agent(subagent_type: "scout")` with the prompt below. The
 `model` parameter is omitted; resolution falls through to the scout
-frontmatter (`claude-haiku-4-5-20251001`) per ADR-0048.
+frontmatter (`haiku`) per ADR-0048.
 
 ```
 <task>Read the files listed in <read> below. Return the full content of every file exactly as-is. Do not summarize, paraphrase, or omit any part of any file. Do not add commentary, headings, or analysis. Raw file dumps only.</task>

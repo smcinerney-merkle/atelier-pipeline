@@ -288,6 +288,11 @@ DESTRUCTIVE_CHECKOUTS = [
     "git checkout --ours src/x.ts",
     "git checkout --theirs src/x.ts",
     "git checkout --patch",
+    # G-151/P2 (operator decision 2026-09-25): a checkout positional
+    # operand (path or ref) is unconditionally blocked now -- moved here
+    # from the nondestructive/unanchored list below, which asserted this
+    # was allowed under 5.2.3's plain-branch-switch behavior.
+    "git checkout main",
 ]
 
 # G-147 FLIP: a bare "git checkout --detach" (and "--track"/"--help") moved
@@ -342,7 +347,6 @@ def test_git_checkout_exempt_longforms_allowed_for_non_ellis(tmp_path, command):
 
 
 @pytest.mark.parametrize("command", [
-    "git checkout main",
     "git checkout -b feature/x",
     "git status && git diff",
     "echo 'remember to git add later'",

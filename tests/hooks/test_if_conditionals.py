@@ -152,6 +152,55 @@ def test_T_0020_009_enforce_git_has_no_if_field_at_all():
 # Hook wiring audit: session-hydrate.sh is now a no-op and removed from SessionStart.
 # ADR-0055 Phase 3 (brain extraction): session-hydrate-enforcement.sh removed -- it depended on
 # brain/scripts/hydrate-enforcement.mjs which no longer exists in the pipeline repo.
+def test_G_151_prompt_compact_advisory_has_no_if_field():
+    """G-151: prompt-compact-advisory.sh's SubagentStop registration carried
+    an `if: "agent_type == 'ellis'"` JS-expression conditional -- the same
+    class of dead `if` G-107/G-143 already removed from enforce-git.sh (see
+    test_T_0020_001's docstring: the harness's `if` never evaluates a JS
+    boolean expression for any hook event). The script already filters for
+    Ellis itself via hook_lib_agent_type_matches (bare `ellis` and named
+    `ellis-*`), so removing the dead `if` changes nothing about who the
+    advisory fires for -- see test_prompt_compact_advisory.py."""
+    settings = json.loads((PROJECT_ROOT / ".claude" / "settings.json").read_text())
+    stop_matchers = settings["hooks"].get("SubagentStop", [])
+    advisory_hooks = [
+        h for m in stop_matchers for h in m.get("hooks", [])
+        if h.get("command") and "prompt-compact-advisory.sh" in h["command"]
+    ]
+    assert len(advisory_hooks) == 1, f"Expected exactly one registration, found {advisory_hooks}"
+    assert "if" not in advisory_hooks[0], (
+        f"prompt-compact-advisory.sh registration must have no `if` field. "
+        f"Found: {advisory_hooks[0]!r}"
+    )
+
+
+def test_G_151_hooks_md_prompt_compact_advisory_has_no_if():
+    """G-151: parity check -- the setup-skill template must match the
+    installed settings.json (no `if` on prompt-compact-advisory.sh)."""
+    hooks_text = (PROJECT_ROOT / "skills" / "pipeline-setup" / "hooks.md").read_text()
+    assert 'prompt-compact-advisory.sh",\n            "if"' not in hooks_text
+    assert 'prompt-compact-advisory.sh"\n          }' in hooks_text
+
+
+def test_G_151_no_brain_extractor_subagent_stop_entry():
+    """G-151: brain-extractor no longer exists (ADR-0053 replaced it with
+    the three-hook mechanical capture gate --
+    source/shared/rules/pipeline-orchestration.md). There is no
+    source/shared/agents/brain-extractor.md or frontmatter overlay to
+    install, so settings.json and the setup-skill template must not
+    register a `type: agent, agent: brain-extractor` SubagentStop entry."""
+    settings = json.loads((PROJECT_ROOT / ".claude" / "settings.json").read_text())
+    stop_matchers = settings["hooks"].get("SubagentStop", [])
+    extractor_hooks = [
+        h for m in stop_matchers for h in m.get("hooks", [])
+        if h.get("agent") == "brain-extractor" or "brain-extractor" in str(h.get("command", ""))
+    ]
+    assert len(extractor_hooks) == 0, f"Found stale brain-extractor entry: {extractor_hooks}"
+
+    hooks_text = (PROJECT_ROOT / "skills" / "pipeline-setup" / "hooks.md").read_text()
+    assert '"agent": "brain-extractor"' not in hooks_text
+
+
 def test_T_0020_010_warn_dor_dod_if_field_type():
     settings = json.loads((PROJECT_ROOT / ".claude" / "settings.json").read_text())
     stop_matchers = settings["hooks"].get("SubagentStop", [])

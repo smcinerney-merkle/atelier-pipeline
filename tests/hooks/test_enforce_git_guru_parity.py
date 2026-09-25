@@ -7,26 +7,34 @@ test_enforce_git_rf_parity.py) did not: the global-option bypass closure
 (`git -C . commit`), shell-separator modeling (`;;`, bare `&`, `|&`,
 then/do/else/elif prefixes), the four operator-decision verbs (stash,
 revert, rm, cherry-pick, rebase, apply, am, merge), the GIT_WRITE_EXEMPT
-allowlist (merge --ff-only, stash list/show, checkout --detach/--track/
---help) with its single-line/whole-string/flag-not-exit properties, the
+allowlist with its single-line/whole-string/flag-not-exit properties, the
 hyphenated-verb-group boundary (merge-base survives, merge blocked), and the
 Ellis exemption's hyphen-anchor (ellis-state admitted, ellisfoo rejected).
 
-Two cases from Guru's suite are ADAPTED here because they assert this fork's
-test-suite rule differently -- Guru's own hook blocks the main thread from
-running test suites; this fork's G-143 fix deliberately allows it (Eva's
-mandatory gates require running the test command directly via Bash):
+G-151 (2026-09-25, operator decision, portal reconciliation) changed two of
+Guru's own row groupings, ported below with the flip noted at each site:
 
-  1. "test-suite guard identity (G-114)" -- Guru asserts an empty agent_type
-     (main thread) is BLOCKED from `npm test`. Flipped to ALLOWED here
-     (test_g114_main_thread_allowed_for_test_suite_fork_rule).
-  2. "test-suite guard coverage gap (G-112)" -- Guru characterizes
-     `npx vitest run` as UNGATED for a non-allowlisted agent. This fork's
-     G-143 fix already closed that specific gap (the npx-prefix group now
-     covers bare-runner-name forms), so a non-allowlisted agent ("sarah") is
-     now BLOCKED, not ungated. `npm run ci:test` is NOT covered by G-143 (the
-     script name doesn't start with "test") and remains a genuine open gap
-     in this fork too -- ported unchanged.
+  - P1: `merge --ff-only` is no longer exempt -- it is an ordinary
+    unconditional write verb now. Guru's own `merge --ff-only origin/main`
+    row moves from GURU_ALLOWED_GIT_COMMANDS into the blocked-for-colby
+    group.
+  - P2: a checkout positional operand (path or ref) is unconditionally
+    blocked now, reversing this fork's 5.2.3 behavior of allowing a plain
+    `checkout <branch>` as a non-destructive switch. Every Guru row that
+    exercised that plain-branch-switch allowance (`checkout main`, and its
+    compound-operator variants) moves from GURU_ALLOWED_GIT_COMMANDS into
+    the blocked-for-colby group. The flag-led exemptions Guru already
+    covered (`-b`, `-t`, `--detach`, `--track`, `--help`) are unaffected.
+  - P4: `stash show`/`stash list` are read-only regardless of arguments now
+    (no longer discriminated by trailing-argument shape). Guru's own
+    `stash show .` and `stash show -p` rows move OUT of the blocked-for-
+    colby group -- both are simply allowed for everyone now.
+
+The test-suite execution guard this file used to ADAPT two of Guru's cases
+against (G-114 identity, G-112 coverage gap) was DELETED entirely per
+G-151/P3 -- test runners are allowed for every agent now, so there is no
+guard left to adapt Guru's cases against. Those adapted tests are removed
+below, not updated.
 """
 
 import pytest
@@ -92,9 +100,25 @@ GURU_DESTRUCTIVE_GIT_WRITE_COMMANDS = [
     "git checkout --detach HEAD .",
     "git checkout --detach ./src",
     "git checkout --detach ..",
-    "git stash show .",
     "git merge --ff-only .",
-    "git stash show -p",
+    # G-151/P1: merge --ff-only is unconditional now -- this Guru row moved
+    # here from GURU_ALLOWED_GIT_COMMANDS (was allowed for colby before).
+    "git merge --ff-only origin/main",
+    # G-151/P2: a checkout positional operand is unconditionally blocked
+    # now -- these Guru rows moved here from GURU_ALLOWED_GIT_COMMANDS
+    # (each was allowed for colby before, as a plain branch switch).
+    "git checkout main",
+    "git checkout ./src",
+    "git checkout src/x.ts",
+    "git checkout HEAD file.txt",
+    "git checkout main src/x.ts",
+    "git checkout HEAD~1 lib/f.ts",
+    "git checkout -q HEAD file.txt",
+    "git checkout main && echo done",
+    "git checkout main; echo done",
+    "git checkout main 2>/dev/null",
+    "git checkout main | cat",
+    "git checkout feature/foo && npm ci",
     # Pre-existing regression guards (already blocked before 40745cf)
     "git checkout -- foo.sh",
     "git checkout -- .",
@@ -144,28 +168,30 @@ GURU_ALLOWED_GIT_COMMANDS = [
     "git show HEAD:x",
     "git rev-parse HEAD",
     "git fetch",
-    "git merge --ff-only origin/main",
     "git worktree add ../x",
     "git worktree remove ../x",
-    "git checkout main",
+    # Flag-led checkout branch forms -- the only checkout shapes still
+    # exempt after G-151/P2 (see GURU_DESTRUCTIVE_GIT_WRITE_COMMANDS above
+    # for every plain-positional-operand form that moved OUT of this list).
     "git checkout -b newbranch",
     "git checkout -t origin/x",
     "git checkout -b feature/x start-pt",
-    "git checkout ./src",
-    "git checkout src/x.ts",
-    "git checkout HEAD file.txt",
-    "git checkout main src/x.ts",
-    "git checkout HEAD~1 lib/f.ts",
     "git -C . status",
     "git -C . diff --stat",
     "git --no-pager log --oneline",
     "git -C . rev-parse HEAD",
     "git stash list",
     "git stash show",
+    # G-151/P4: stash show/list are read-only regardless of arguments now.
+    "git stash show .",
+    "git stash show -p",
     "git checkout --detach main",
     "git checkout --track origin/x",
     "git checkout --help",
-    "git checkout -q HEAD file.txt",
+    # G-151/P2: plain `git switch <branch>` stays allowed -- checkout's
+    # modern replacement, deliberately not folded into the checkout
+    # positional-operand block.
+    "git switch main",
     # Hyphenated-verb-group boundary: the group boundary is ([^-[:alnum:]]|$),
     # not \b, so these read-only siblings of newly-blocked `merge`/pre-existing
     # `commit`/`checkout` must NOT be caught.
@@ -176,12 +202,6 @@ GURU_ALLOWED_GIT_COMMANDS = [
     "git commit-tree x",
     "git mergetool",
     "git commit中",
-    # Compound branch-switch regression guard
-    "git checkout main && echo done",
-    "git checkout main; echo done",
-    "git checkout main 2>/dev/null",
-    "git checkout main | cat",
-    "git checkout feature/foo && npm ci",
 ]
 
 
@@ -212,65 +232,10 @@ def test_guru_ellis_hyphen_anchor_blocks_lookalike(hook_env):
     _blocked(_run(hook_env, "git reset --hard", "ellisfoo"))
 
 
-# ── ADAPTED: test-suite guard identity (G-114) ────────────────────────────
-# Guru's own hook blocks the main thread from `npm test`. This fork's G-143
-# fix deliberately allows the main thread (Eva) -- adapted expectation below.
-
-
-def test_g114_main_thread_allowed_for_test_suite_fork_rule(hook_env):
-    """ADAPTED from Guru: main thread (empty agent_type) is ALLOWED to run
-    the test suite under this fork's rule, not blocked."""
-    _allowed(_run(hook_env, "npm test", None))
-
-
-def test_g114_colby_allowed_for_test_suite(hook_env):
-    _allowed(_run(hook_env, "npm test", "colby"))
-
-
-def test_g114_named_colby_allowed_for_test_suite(hook_env):
-    _allowed(_run(hook_env, "npm test", "colby-hook-tests"))
-
-
-def test_g114_poirot_allowed_for_test_suite(hook_env):
-    _allowed(_run(hook_env, "npm test", "poirot"))
-
-
-def test_g114_named_poirot_allowed_for_test_suite(hook_env):
-    _allowed(_run(hook_env, "npm test", "poirot-review"))
-
-
-def test_g114_sarah_blocked_for_test_suite(hook_env):
-    """Not in Guru's suite (Guru never allowlists anyone but Poirot/Colby to
-    compare against) -- added so the identity gate has a genuine negative
-    case under the fork's own allowlist (colby, investigator, poirot, plus
-    the main thread)."""
-    _blocked(_run(hook_env, "npm test", "sarah"))
-
-
-# ── ADAPTED: test-suite guard coverage gap (G-112) ────────────────────────
-
-
-def test_g112_npx_vitest_run_blocked_for_non_allowlisted_agent(hook_env):
-    """ADAPTED from Guru: Guru characterizes `npx vitest run` as UNGATED for
-    a non-allowlisted agent. This fork's G-143 fix already added the
-    `(npx|pnpm exec|yarn exec)` prefix group ahead of the bare-runner-name
-    alternatives, so this specific form is now BLOCKED for a non-allowlisted
-    agent -- verified empirically before writing this test."""
-    _blocked(_run(hook_env, "npx vitest run", "sarah"))
-
-
-def test_g112_npx_vitest_run_allowed_for_main_thread(hook_env):
-    """Main thread stays allowed regardless -- same rule as G-114, unrelated
-    to whether the command shape is gated."""
-    _allowed(_run(hook_env, "npx vitest run", None))
-
-
-def test_g112_npm_run_ci_test_still_ungated_known_gap(hook_env):
-    """NOT adapted: `npm run ci:test` is still a genuine open gap in this
-    fork too. The G-143 fix's `test(:\\S+)?\\b` branch requires the script
-    name to START with "test" ("test:run", "test:e2e"); "ci:test" does not,
-    so this command is UNGATED for every agent including a non-allowlisted
-    one. Pinned here as a known, deliberately-left-open gap per Guru's own
-    docstring for this case -- not a policy endorsement, and not something
-    this change fixes."""
-    _allowed(_run(hook_env, "npm run ci:test", "sarah"))
+# ── DELETED (G-151/P3, 2026-09-25): test-suite guard identity (G-114) and
+# coverage-gap (G-112) adaptations. The guard both sections adapted Guru's
+# cases against was deleted outright -- test runners are allowed for every
+# agent now, so there is no identity gate or coverage gap left to
+# characterize. See tests/hooks/test_enforce_git_rf_parity.py for the
+# replacement "allowed for everyone, including a previously-blocked
+# identity" coverage.

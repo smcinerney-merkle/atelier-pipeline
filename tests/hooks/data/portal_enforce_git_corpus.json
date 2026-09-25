@@ -1,0 +1,1148 @@
+{
+  "provenance": {
+    "source_repo": "https://github.com/smcinerney-merkle/strategy-workbench-portal.git",
+    "source_path": "apps/shell/tests/enforce-git-hook.cases.ts",
+    "source_commit": "5ec9ceb313637c998b3145d9ebe098575559905a",
+    "extraction_commit": "e50d42dba342adcd0cc36f6c331a86bfc8aee9f6",
+    "ported_by": "G-151 item 2 (2026-09-25), colby-g151-git",
+    "note": "Ported per operator decision P6. The portal's own two pattern-provenance tests and four derived-count tests are NOT ported here -- the portal keeps those locally. The portal's ee-01 row (`git checkout main && git merge --ff-only session/x` as main thread -> exit 2) is kept as data below, unaltered.",
+    "categories": {
+      "guard": "ALL_GUARD_CASES (t1-*, t2-*, id-*, ee-*, tr-*)",
+      "setup_mode_file": "SETUP_MODE_CASES (docs/pipeline/.setup-mode sentinel)",
+      "atelier_setup_mode_env": "ATELIER_SETUP_MODE_ENV_CASES (ATELIER_SETUP_MODE=1/0)",
+      "tool_name": "TOOL_NAME_CASES (tool_name != Bash short-circuit)",
+      "git_available": "GIT_AVAILABLE_CASES (pipeline-config.json git_available:false)"
+    },
+    "total_cases": 140
+  },
+  "cases": [
+    {
+      "id": "t1-01",
+      "kind": "guard",
+      "command": "git commit -m x",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "plain write verb"
+    },
+    {
+      "id": "t1-02",
+      "kind": "guard",
+      "command": "git add .",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "plain write verb"
+    },
+    {
+      "id": "t1-03",
+      "kind": "guard",
+      "command": "git push origin main",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "plain write verb"
+    },
+    {
+      "id": "t1-04",
+      "kind": "guard",
+      "command": "git reset --hard",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "plain write verb"
+    },
+    {
+      "id": "t1-05",
+      "kind": "guard",
+      "command": "git clean -fd",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "plain write verb"
+    },
+    {
+      "id": "t1-06",
+      "kind": "guard",
+      "command": "git restore .",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "plain write verb"
+    },
+    {
+      "id": "t1-07",
+      "kind": "guard",
+      "command": "git checkout -- .",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "checkout unconditional"
+    },
+    {
+      "id": "t1-08",
+      "kind": "guard",
+      "command": "git checkout -f",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "checkout unconditional"
+    },
+    {
+      "id": "t1-09",
+      "kind": "guard",
+      "command": "cd x && git checkout -f",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "&& position"
+    },
+    {
+      "id": "t1-10",
+      "kind": "guard",
+      "command": "foo; git push",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "; position"
+    },
+    {
+      "id": "t1-11",
+      "kind": "guard",
+      "command": "(cd sub && git commit -m x)",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "paren + && position"
+    },
+    {
+      "id": "t1-12",
+      "kind": "guard",
+      "command": "git checkout HEAD -- src/app.ts",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "checkout unconditional"
+    },
+    {
+      "id": "t1-13",
+      "kind": "guard",
+      "command": "git push;",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "trailing ;"
+    },
+    {
+      "id": "t1-14",
+      "kind": "guard",
+      "command": "git reset",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "bare reset"
+    },
+    {
+      "id": "t1-15",
+      "kind": "guard",
+      "command": "git --git-dir=/r/.git push",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "explicit global option"
+    },
+    {
+      "id": "t1-16",
+      "kind": "guard",
+      "command": "(git commit -m x)",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "position class: leading paren"
+    },
+    {
+      "id": "t1-17",
+      "kind": "guard",
+      "command": "$(git commit -m x)",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "position class: command substitution"
+    },
+    {
+      "id": "t1-18",
+      "kind": "guard",
+      "command": "if true; then git commit -m x; fi",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "position class: then"
+    },
+    {
+      "id": "t1-19",
+      "kind": "guard",
+      "command": "for i in 1; do git push; done",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "position class: do"
+    },
+    {
+      "id": "t1-20",
+      "kind": "guard",
+      "command": "{ git commit -m x; }",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "position class: brace group"
+    },
+    {
+      "id": "t1-21",
+      "kind": "guard",
+      "command": "sleep 1 & git commit -m x",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "position class: single &"
+    },
+    {
+      "id": "t1-22",
+      "kind": "guard",
+      "command": "git -C . commit -m x",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "option bypass: -C"
+    },
+    {
+      "id": "t1-23",
+      "kind": "guard",
+      "command": "git -C . checkout -- .",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "option bypass: -C, the 2026-09-09 form"
+    },
+    {
+      "id": "t1-24",
+      "kind": "guard",
+      "command": "git -c user.name=x commit -m y",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "option bypass: -c"
+    },
+    {
+      "id": "t1-25",
+      "kind": "guard",
+      "command": "git --work-tree=/w reset --hard",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "option bypass: --work-tree="
+    },
+    {
+      "id": "t1-26",
+      "kind": "guard",
+      "command": "git -C /r -c a=b add .",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "option bypass: stacked options"
+    },
+    {
+      "id": "t1-27",
+      "kind": "guard",
+      "command": "git checkout ./file.txt",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "checkout on a path -- unconditional per ADR, undecidable by argument-sniffing"
+    },
+    {
+      "id": "t1-28",
+      "kind": "guard",
+      "command": "git checkout src/app.ts",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "checkout on a path -- unconditional"
+    },
+    {
+      "id": "t1-29",
+      "kind": "guard",
+      "command": "git switch -f main",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "switch: deliberate scope increase, checkout's modern equivalent"
+    },
+    {
+      "id": "t1-30",
+      "kind": "guard",
+      "command": "git status",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read"
+    },
+    {
+      "id": "t1-31",
+      "kind": "guard",
+      "command": "git log --oneline",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read"
+    },
+    {
+      "id": "t1-32",
+      "kind": "guard",
+      "command": "git diff --cached",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read"
+    },
+    {
+      "id": "t1-33",
+      "kind": "guard",
+      "command": "git log --grep=commit",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read; verb text inside an option value"
+    },
+    {
+      "id": "t1-34",
+      "kind": "guard",
+      "command": "git log -n 5 --oneline",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read"
+    },
+    {
+      "id": "t1-35",
+      "kind": "guard",
+      "command": "git -C /repo status",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read with global option"
+    },
+    {
+      "id": "t1-36",
+      "kind": "guard",
+      "command": "git -C /repo log --stat",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read with global option"
+    },
+    {
+      "id": "t1-37",
+      "kind": "guard",
+      "command": "git show HEAD --stat",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read"
+    },
+    {
+      "id": "t1-38",
+      "kind": "guard",
+      "command": "git rev-parse --verify HEAD",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read"
+    },
+    {
+      "id": "t1-39",
+      "kind": "guard",
+      "command": "git worktree add ../wt",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "ADR-0038 carve-out: worktree occupies the verb slot, not add"
+    },
+    {
+      "id": "t1-41",
+      "kind": "guard",
+      "command": "npm run push",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "not git at all"
+    },
+    {
+      "id": "t1-42",
+      "kind": "guard",
+      "command": "git pushx",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "verb token boundary: pushx is not push"
+    },
+    {
+      "id": "t1-43",
+      "kind": "guard",
+      "command": "echo \"git -C . commit\"",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "quoted mention, no position anchor precedes git"
+    },
+    {
+      "id": "t1-44",
+      "kind": "guard",
+      "command": "pnpm --filter @workbench/shell test && pnpm --dir infra test",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "no git at all; also the declared test_command"
+    },
+    {
+      "id": "t1-45",
+      "kind": "guard",
+      "command": "git log -- push.txt",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read, pathspec separator before a write-verb-shaped token"
+    },
+    {
+      "id": "t1-46",
+      "kind": "guard",
+      "command": "git --no-pager log -- push.txt",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "fixed FP: explicit option list no longer swallows -- as a bogus option"
+    },
+    {
+      "id": "t1-47",
+      "kind": "guard",
+      "command": "git add-ons.sh",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "fixed FP: real token boundary, not \\b, rejects add-ons"
+    },
+    {
+      "id": "t1-48",
+      "kind": "guard",
+      "command": "echo \"see git commit docs\"",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "mention only, no position anchor"
+    },
+    {
+      "id": "t1-49",
+      "kind": "guard",
+      "command": "cat notes.md | grep \"git push\"",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "mention only inside a quoted grep pattern"
+    },
+    {
+      "id": "t1-50",
+      "kind": "guard",
+      "command": "jq '.x' f.json # note: git commit later",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "mention only, in a comment"
+    },
+    {
+      "id": "t1-51",
+      "kind": "guard",
+      "command": "sed -i '' 's/git add/x/' f.md",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "mention only, inside a sed expression"
+    },
+    {
+      "id": "t1-52",
+      "kind": "guard",
+      "command": "grep -E \"^(git commit|x)\"",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "mention only, quoted alternation"
+    },
+    {
+      "id": "t1-53",
+      "kind": "guard",
+      "command": "grep -E \"(git push)\"",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "mention only, quoted paren -- NOT the residual FP row (no leading space before the paren)"
+    },
+    {
+      "id": "t1-54",
+      "kind": "guard",
+      "command": "awk '{print $1}' | grep \"(git commit)\"",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "mention only"
+    },
+    {
+      "id": "t1-55",
+      "kind": "guard",
+      "command": "echo \"; git push\"",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "quote-blindness rescue: verb followed by closing quote is inside a string"
+    },
+    {
+      "id": "t1-56",
+      "kind": "guard",
+      "command": "echo \"x && git commit\"",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "quote-blindness rescue"
+    },
+    {
+      "id": "t1-57",
+      "kind": "guard",
+      "command": "echo 'then git push'",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "quote-blindness rescue"
+    },
+    {
+      "id": "t1-58",
+      "kind": "guard",
+      "command": "git commit-tree",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "scope judgement (ADR Consequences): writes an object without moving a ref, treated as out of scope"
+    },
+    {
+      "id": "t1-59",
+      "kind": "guard",
+      "command": "grep -E \" (git push)\"",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "ACCEPTED FALSE POSITIVE (known, not a bug): space-preceded paren inside a quoted string is indistinguishable from command position without quote tracking"
+    },
+    {
+      "id": "t1-40-DISPUTED",
+      "kind": "guard",
+      "command": "git stash push",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "ADR-0021 Table 1 originally asserted allow (0) for this row; corrected by the 2026-09-16 erratum to block (2), matching the live hook. See file header."
+    },
+    {
+      "id": "t2-01",
+      "kind": "guard",
+      "command": "git stash",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(R): bare stash removes uncommitted work from the tree"
+    },
+    {
+      "id": "t2-02",
+      "kind": "guard",
+      "command": "git stash -u",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(R): discriminated write subform, flag"
+    },
+    {
+      "id": "t2-03",
+      "kind": "guard",
+      "command": "git stash --keep-index",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(R): discriminated write subform, flag"
+    },
+    {
+      "id": "t2-04",
+      "kind": "guard",
+      "command": "git stash pop",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(R): discriminated write subform"
+    },
+    {
+      "id": "t2-05",
+      "kind": "guard",
+      "command": "git stash drop",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(R): destroys a stash outright, fsck-archaeology only"
+    },
+    {
+      "id": "t2-06",
+      "kind": "guard",
+      "command": "git stash clear",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(R): destroys all stashes outright"
+    },
+    {
+      "id": "t2-07",
+      "kind": "guard",
+      "command": "git stash apply",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(R): discriminated write subform"
+    },
+    {
+      "id": "t2-08",
+      "kind": "guard",
+      "command": "git stash push -m wip",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(R): the 2026-09-09 incident's verb, with a message"
+    },
+    {
+      "id": "t2-09",
+      "kind": "guard",
+      "command": "git stash save wip",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(R): discriminated write subform, deprecated spelling"
+    },
+    {
+      "id": "t2-10",
+      "kind": "guard",
+      "command": "git stash branch nb",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(R): discriminated write subform"
+    },
+    {
+      "id": "t2-11",
+      "kind": "guard",
+      "command": "git -C /r stash",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(R): with global option"
+    },
+    {
+      "id": "t2-12",
+      "kind": "guard",
+      "command": "cd x && git stash -u",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(R): position + discriminated verb"
+    },
+    {
+      "id": "t2-13",
+      "kind": "guard",
+      "command": "(git stash)",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(R): position class + discriminated verb"
+    },
+    {
+      "id": "t2-14",
+      "kind": "guard",
+      "command": "git stash;",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(R): bare stash, trailing ;"
+    },
+    {
+      "id": "t2-15",
+      "kind": "guard",
+      "command": "git revert HEAD",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(G2): creates a commit"
+    },
+    {
+      "id": "t2-16",
+      "kind": "guard",
+      "command": "git rm old.txt",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(R): deletes a tracked file from tree and index"
+    },
+    {
+      "id": "t2-17",
+      "kind": "guard",
+      "command": "git merge --ff-only session/x",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(G2): creates a commit, moves a ref"
+    },
+    {
+      "id": "t2-18",
+      "kind": "guard",
+      "command": "git rebase -i main",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(G2): rewrites commits, moves refs"
+    },
+    {
+      "id": "t2-19",
+      "kind": "guard",
+      "command": "git cherry-pick abc123",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(G2): creates commits"
+    },
+    {
+      "id": "t2-20",
+      "kind": "guard",
+      "command": "git am < p.patch",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(G2)+(R): creates commits, can leave a half-applied dirty tree"
+    },
+    {
+      "id": "t2-21",
+      "kind": "guard",
+      "command": "git apply p.diff",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(R): writes a patch into the working tree"
+    },
+    {
+      "id": "t2-22",
+      "kind": "guard",
+      "command": "git gc --prune=now",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(F): destroys unreachable objects permanently"
+    },
+    {
+      "id": "t2-23",
+      "kind": "guard",
+      "command": "git gc",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(F): bare gc also prunes past gc.pruneExpire -- verb blocked, not the flag"
+    },
+    {
+      "id": "t2-24",
+      "kind": "guard",
+      "command": "git prune",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(F): same class as gc"
+    },
+    {
+      "id": "t2-25",
+      "kind": "guard",
+      "command": "git reflog expire --expire-unreachable=now --all",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(F): destroys the reflog, the recovery index"
+    },
+    {
+      "id": "t2-26",
+      "kind": "guard",
+      "command": "git reflog delete HEAD@{2}",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(F): discriminated write subform of reflog"
+    },
+    {
+      "id": "t2-27",
+      "kind": "guard",
+      "command": "git filter-branch --tree-filter x",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(R)+(G2): rewrites all history"
+    },
+    {
+      "id": "t2-28",
+      "kind": "guard",
+      "command": "git filter-repo --path x",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "(R)+(G2): modern filter-branch replacement"
+    },
+    {
+      "id": "t2-29",
+      "kind": "guard",
+      "command": "$(git gc --prune=now)",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "position class + (F) verb"
+    },
+    {
+      "id": "t2-30",
+      "kind": "guard",
+      "command": "git stash list",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read subform: list is a closed-vocabulary literal in a fixed slot"
+    },
+    {
+      "id": "t2-31",
+      "kind": "guard",
+      "command": "git stash list --stat",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read subform"
+    },
+    {
+      "id": "t2-32",
+      "kind": "guard",
+      "command": "git stash show",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read subform"
+    },
+    {
+      "id": "t2-33",
+      "kind": "guard",
+      "command": "git stash show -p stash@{0}",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read subform"
+    },
+    {
+      "id": "t2-34",
+      "kind": "guard",
+      "command": "git reflog",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "bare reflog is a read"
+    },
+    {
+      "id": "t2-35",
+      "kind": "guard",
+      "command": "git reflog show HEAD",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read subform"
+    },
+    {
+      "id": "t2-36",
+      "kind": "guard",
+      "command": "git reflog --all",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read, flag not a discriminated write literal"
+    },
+    {
+      "id": "t2-37",
+      "kind": "guard",
+      "command": "git merge-base main HEAD",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "hyphenated plumbing verb: boundary excludes -, cannot match merge"
+    },
+    {
+      "id": "t2-38",
+      "kind": "guard",
+      "command": "git merge-tree main HEAD",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "hyphenated plumbing verb"
+    },
+    {
+      "id": "t2-39",
+      "kind": "guard",
+      "command": "git mv a.txt b.txt",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "excluded verb: content-preserving rename, trivially undone"
+    },
+    {
+      "id": "t2-40",
+      "kind": "guard",
+      "command": "git tag",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "excluded verb: bare tag is a read"
+    },
+    {
+      "id": "t2-41",
+      "kind": "guard",
+      "command": "git tag -d v1.0.0",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "excluded verb: destructive form is narrow and fsck-recoverable, tags unused in this repo's flow"
+    },
+    {
+      "id": "t2-42",
+      "kind": "guard",
+      "command": "git branch",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "excluded verb: bare branch is a read"
+    },
+    {
+      "id": "t2-43",
+      "kind": "guard",
+      "command": "git branch -D session/ab12cd34",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "MANDATED allowance: Ellis's documented cleanup, branch-lifecycle.md:27"
+    },
+    {
+      "id": "t2-44",
+      "kind": "guard",
+      "command": "git worktree add -b session/ab12cd34 ../slug-ab12cd34",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "MANDATED allowance (ADR-0038): Eva's session branch creation, branch-lifecycle.md:13"
+    },
+    {
+      "id": "t2-45",
+      "kind": "guard",
+      "command": "git worktree remove --force ../slug-ab12cd34",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "MANDATED allowance (ADR-0038): Ellis's cleanup, branch-lifecycle.md:26"
+    },
+    {
+      "id": "t2-46",
+      "kind": "guard",
+      "command": "git worktree prune",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "verb not in verb slot: worktree occupies it, prune does not"
+    },
+    {
+      "id": "t2-47",
+      "kind": "guard",
+      "command": "git blame src/app.ts",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read"
+    },
+    {
+      "id": "t2-48",
+      "kind": "guard",
+      "command": "git describe --tags",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read"
+    },
+    {
+      "id": "t2-49",
+      "kind": "guard",
+      "command": "git grep push -- src",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "read; write-verb-shaped token as an operand"
+    },
+    {
+      "id": "t2-50",
+      "kind": "guard",
+      "command": "echo \"run git merge next\"",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "mention only"
+    },
+    {
+      "id": "t2-51",
+      "kind": "guard",
+      "command": "git apply --check p.diff",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "ACCEPTED FALSE POSITIVE (known, not a bug): --check is a flag-position read marker on a verb admitted on ground (R); erring toward blocking is the correct direction"
+    },
+    {
+      "id": "t2-52",
+      "kind": "guard",
+      "command": "git rm --dry-run old.txt",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "ACCEPTED FALSE POSITIVE (known, not a bug): --dry-run is a flag-position read marker"
+    },
+    {
+      "id": "t2-53",
+      "kind": "guard",
+      "command": "echo \"; git rm old.txt\"",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "ACCEPTED FALSE POSITIVE (known, not a bug), NEW residual introduced by widening the verb list: rm takes an operand, so the quote-blindness rescue that saves echo \"; git push\" does not apply"
+    },
+    {
+      "id": "tr-01",
+      "kind": "guard",
+      "command": "pnpm test",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "main thread -- previously the blocked identity under the deleted half"
+    },
+    {
+      "id": "tr-02",
+      "kind": "guard",
+      "command": "vitest run",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "main thread"
+    },
+    {
+      "id": "tr-03",
+      "kind": "guard",
+      "command": "pytest",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "main thread"
+    },
+    {
+      "id": "tr-04",
+      "kind": "guard",
+      "command": "node --test",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "main thread"
+    },
+    {
+      "id": "tr-05",
+      "kind": "guard",
+      "command": "pnpm --filter @workbench/shell test && pnpm --dir infra test",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "the declared test_command itself, main thread"
+    },
+    {
+      "id": "tr-06",
+      "kind": "guard",
+      "command": "pnpm test",
+      "agent_type": "colby",
+      "expect_exit": 0,
+      "note": "previously allowlisted identity -- still allowed"
+    },
+    {
+      "id": "tr-07",
+      "kind": "guard",
+      "command": "pnpm test",
+      "agent_type": "poirot-wave1",
+      "expect_exit": 0,
+      "note": "previously allowlisted identity -- still allowed"
+    },
+    {
+      "id": "tr-08",
+      "kind": "guard",
+      "command": "pnpm test",
+      "agent_type": "ellis",
+      "expect_exit": 0,
+      "note": "previously blocked identity under the deleted half -- now allowed"
+    },
+    {
+      "id": "tr-09",
+      "kind": "guard",
+      "command": "pnpm test",
+      "agent_type": "sarah",
+      "expect_exit": 0,
+      "note": "previously blocked identity under the deleted half -- now allowed"
+    },
+    {
+      "id": "id-01",
+      "kind": "guard",
+      "command": "git commit -m x",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "main thread (Eva) -- blocked"
+    },
+    {
+      "id": "id-02",
+      "kind": "guard",
+      "command": "git commit -m x",
+      "agent_type": "colby",
+      "expect_exit": 2,
+      "note": "bare colby -- blocked"
+    },
+    {
+      "id": "id-03",
+      "kind": "guard",
+      "command": "git commit -m x",
+      "agent_type": "colby-wave1",
+      "expect_exit": 2,
+      "note": "colby-* instance -- blocked"
+    },
+    {
+      "id": "id-04",
+      "kind": "guard",
+      "command": "git commit -m x",
+      "agent_type": "poirot",
+      "expect_exit": 2,
+      "note": "bare poirot -- blocked"
+    },
+    {
+      "id": "id-05",
+      "kind": "guard",
+      "command": "git commit -m x",
+      "agent_type": "poirot-wave1",
+      "expect_exit": 2,
+      "note": "poirot-* instance -- blocked"
+    },
+    {
+      "id": "id-06",
+      "kind": "guard",
+      "command": "git commit -m x",
+      "agent_type": "ellis",
+      "expect_exit": 0,
+      "note": "bare ellis -- allowed"
+    },
+    {
+      "id": "id-07",
+      "kind": "guard",
+      "command": "git commit -m x",
+      "agent_type": "ellis-state",
+      "expect_exit": 0,
+      "note": "ellis-* instance name, arbitrary"
+    },
+    {
+      "id": "id-08",
+      "kind": "guard",
+      "command": "git commit -m x",
+      "agent_type": "ellis-final",
+      "expect_exit": 0,
+      "note": "ellis-* instance name, arbitrary, distinct from id-07"
+    },
+    {
+      "id": "id-09",
+      "kind": "guard",
+      "command": "git commit -m x",
+      "agent_type": "ellis-commit-wave1",
+      "expect_exit": 0,
+      "note": "ellis-* instance name, arbitrary, distinct from id-07/id-08 -- proves the glob, not an enumerated list"
+    },
+    {
+      "id": "ee-01",
+      "kind": "guard",
+      "command": "git checkout main && git merge --ff-only session/x",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "branch-lifecycle.md:18's exact command, run as the main thread -- blocked (checkout is unconditional)"
+    },
+    {
+      "id": "ee-02",
+      "kind": "guard",
+      "command": "git checkout main && git merge --ff-only session/x",
+      "agent_type": "ellis",
+      "expect_exit": 0,
+      "note": "same command, run as Ellis -- allowed by identity exemption, per branch-lifecycle.md:18"
+    },
+    {
+      "id": "sm-01",
+      "kind": "setup_mode_file",
+      "command": "git commit -m x",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "kill switch absent -- normal blocking behavior applies",
+      "setup_mode_file_present": false
+    },
+    {
+      "id": "sm-02",
+      "kind": "setup_mode_file",
+      "command": "git commit -m x",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "kill switch present -- hook stands down entirely, even for a command it would otherwise block",
+      "setup_mode_file_present": true
+    },
+    {
+      "id": "asm-01",
+      "kind": "atelier_setup_mode_env",
+      "command": "git commit -m x",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "switch ON: ATELIER_SETUP_MODE=1 stands the guard down entirely for a command it would otherwise block",
+      "atelier_setup_mode": "1"
+    },
+    {
+      "id": "asm-02",
+      "kind": "atelier_setup_mode_env",
+      "command": "git commit -m x",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "switch OFF: ATELIER_SETUP_MODE=0 restores normal blocking for the identical command",
+      "atelier_setup_mode": "0"
+    },
+    {
+      "id": "tn-01",
+      "kind": "tool_name",
+      "command": "git push origin main",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "switch ON: tool_name!=Bash returns early at enforce-git.sh:28, guard body never runs",
+      "tool_name": "Write"
+    },
+    {
+      "id": "tn-02",
+      "kind": "tool_name",
+      "command": "git push origin main",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "switch OFF: tool_name=Bash is the only value that reaches the guard body -- identical command blocked",
+      "tool_name": "Bash"
+    },
+    {
+      "id": "ga-01",
+      "kind": "git_available",
+      "command": "git commit -m x",
+      "agent_type": "",
+      "expect_exit": 0,
+      "note": "switch ON: git_available:false in pipeline-config.json stands the guard down entirely",
+      "git_available": false
+    },
+    {
+      "id": "ga-02",
+      "kind": "git_available",
+      "command": "git commit -m x",
+      "agent_type": "",
+      "expect_exit": 2,
+      "note": "switch OFF: git_available:true restores normal blocking for the identical command",
+      "git_available": true
+    }
+  ]
+}

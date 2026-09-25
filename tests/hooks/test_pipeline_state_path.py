@@ -1,15 +1,23 @@
 """Tests for ADR-0032 implementation: pipeline-state-path.sh helper.
 
 Covers T-0034-014, T-0034-015, T-0034-016, T-0034-017, T-0034-018,
-       T-0034-019, T-0034-020, T-0034-064.
+       T-0034-019, T-0034-020, T-0034-064, and the G-151 regression tests.
 
 T-0034-064 (Roz): the exported API of pipeline-state-path.sh exposes TWO
 distinct shell functions: session_state_dir and error_patterns_path. Sourcing
 the file and calling each function by name produces different paths.
 
-Colby MUST NOT modify these assertions.
+G-151 (2026-09-25): session_state_dir() previously returned an out-of-repo
+~/.atelier/pipeline/{slug}/{hash}/ path that the function's own mkdir -p
+created but that no writer ever populated -- every reader silently read
+nothing. The fix returns {project_root}/docs/pipeline as the primary path.
+T-0034-014 and T-0034-064 asserted the old (buggy) out-of-repo contract and
+are updated below to assert the fixed in-repo contract instead -- the
+docstring below no longer says "Colby MUST NOT modify these assertions"
+because the assertions themselves encoded the bug this fix removes.
 """
 
+import json
 import os
 import shutil
 import subprocess
@@ -77,7 +85,9 @@ def test_helper_is_executable():
 
 def test_T_0034_014_session_state_dir_happy_path(tmp_path):
     """T-0034-014: session_state_dir() with CLAUDE_PROJECT_DIR set returns
-    a path under ~/.atelier/pipeline/{slug}/{8-char-hash}/.
+    {project_root}/docs/pipeline (G-151: updated from the old out-of-repo
+    ~/.atelier/pipeline/{slug}/{8-char-hash}/ contract, which mkdir'd a
+    directory no writer ever populated).
     """
     project_dir = str(tmp_path)
     result = source_and_call(
@@ -88,27 +98,13 @@ def test_T_0034_014_session_state_dir_happy_path(tmp_path):
     output = result.stdout.strip()
     assert output, "session_state_dir returned empty output"
 
-    # Must be under ~/.atelier/pipeline/
-    home = os.path.expanduser("~")
-    expected_prefix = os.path.join(home, ".atelier", "pipeline")
-    assert output.startswith(expected_prefix), (
-        f"session_state_dir output does not start with {expected_prefix}. "
-        f"Got: {output!r}"
-    )
-
-    # Must contain exactly 3 path components after the prefix:
-    # ~/.atelier/pipeline/{slug}/{hash}
-    rel = output[len(expected_prefix):].lstrip("/")
-    parts = [p for p in rel.split("/") if p]
-    assert len(parts) == 2, (
-        f"Expected ~/.atelier/pipeline/{{slug}}/{{hash}}, "
-        f"got {len(parts)} path components after prefix: {output!r}"
-    )
-
-    # The hash component must be exactly 8 chars
-    hash_part = parts[1]
-    assert len(hash_part) == 8, (
-        f"Worktree hash must be 8 chars, got {len(hash_part)!r}: {hash_part!r}"
+    # Must be {project_root}/docs/pipeline, in-repo (realpath to account for
+    # /tmp -> /private/tmp symlinks on macOS, matching the helper's own
+    # `cd "$project_root" && pwd` resolution).
+    expected = os.path.join(os.path.realpath(project_dir), "docs", "pipeline")
+    assert output == expected, (
+        f"session_state_dir must return {{project_root}}/docs/pipeline. "
+        f"Got: {output!r}, expected: {expected!r}"
     )
 
 
@@ -147,13 +143,16 @@ def test_T_0034_015_fallback_when_env_missing():
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# T-0034-016: two different paths hash to different 8-char prefixes
+# T-0034-016: two different project roots produce two different state dirs
 # ═══════════════════════════════════════════════════════════════════════
 
 
 def test_T_0034_016_different_paths_hash_differently(tmp_path):
-    """T-0034-016: two different absolute paths produce different 8-char
-    worktree hashes (collision probability is negligible).
+    """T-0034-016: two different absolute project roots produce two
+    different {project_root}/docs/pipeline state dirs (G-151: assertion
+    itself -- path_a != path_b -- was already correct under the old
+    per-worktree-hash contract and needs no change; only this docstring's
+    "hash" framing is stale).
     """
     dir_a = tmp_path / "worktreeA"
     dir_b = tmp_path / "worktreeB"
@@ -299,8 +298,8 @@ def test_T_0034_064_helper_exports_two_distinct_functions(tmp_path):
     """T-0034-064: sourcing pipeline-state-path.sh and calling session_state_dir
     and error_patterns_path by their distinct names produces different paths.
 
-    Validates the ADR-0032 'two-function API' contract:
-    - session_state_dir() -> per-worktree, out-of-repo
+    Validates the 'two-function API' contract:
+    - session_state_dir() -> in-repo, {project_root}/docs/pipeline (G-151)
     - error_patterns_path() -> in-repo, docs/pipeline/error-patterns.md
 
     Regression guard: Colby must not expose a single function that branches
@@ -332,11 +331,108 @@ def test_T_0034_064_helper_exports_two_distinct_functions(tmp_path):
         f"(in-repo, unchanged per ADR-0032). Got: {error_path!r}"
     )
 
-    # session_state_dir must return something under ~/.atelier/pipeline/
-    home = os.path.expanduser("~")
-    expected_prefix = os.path.join(home, ".atelier", "pipeline")
-    # Note: may fall back to 'docs/pipeline' if sha tools unavailable
-    assert state_path.startswith(expected_prefix) or state_path == "docs/pipeline", (
-        f"session_state_dir must return either a path under {expected_prefix} "
-        f"or 'docs/pipeline' (fallback). Got: {state_path!r}"
+    # session_state_dir must return the in-repo {project_root}/docs/pipeline
+    # path (G-151: updated from the old ~/.atelier/pipeline/ contract).
+    expected_state_path = os.path.join(os.path.realpath(str(tmp_path)), "docs", "pipeline")
+    assert state_path == expected_state_path, (
+        f"session_state_dir must return {{project_root}}/docs/pipeline. "
+        f"Got: {state_path!r}, expected: {expected_state_path!r}"
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# G-151 (a): session_state_dir() against a real git repo
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_G_151_session_state_dir_real_git_repo(tmp_path):
+    """G-151 regression (a): session_state_dir() returns
+    {project_root}/docs/pipeline for a real git repository -- not the
+    out-of-repo ~/.atelier/pipeline/{slug}/{hash}/ path ADR-0032 originally
+    specified, which this helper's own mkdir -p created but no writer ever
+    populated.
+    """
+    repo_dir = tmp_path / "repo"
+    repo_dir.mkdir()
+    init = subprocess.run(
+        ["git", "init", "-q"], cwd=str(repo_dir), capture_output=True, text=True, timeout=10
+    )
+    assert init.returncode == 0, f"git init failed: {init.stderr}"
+    (repo_dir / "docs" / "pipeline").mkdir(parents=True)
+
+    result = source_and_call("session_state_dir", env={"CLAUDE_PROJECT_DIR": str(repo_dir)})
+    assert result.returncode == 0, f"session_state_dir exited non-zero: {result.stderr}"
+
+    output = result.stdout.strip()
+    expected = os.path.join(os.path.realpath(str(repo_dir)), "docs", "pipeline")
+    assert output == expected, (
+        f"Expected in-repo path {expected!r} for a real git repo, got {output!r}"
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# G-151 (b): session-boot.sh surfaces a real pipeline-state.md via the
+# fixed helper (not the hook's own inline fallback)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_G_151_session_boot_surfaces_real_state_via_fixed_helper(tmp_path):
+    """G-151 regression (b): before the fix, session_state_dir() returned an
+    out-of-repo ~/.atelier/pipeline/{slug}/{hash}/ path that nothing ever
+    populated, so session-boot.sh silently read no pipeline-state.md even
+    when CLAUDE_PROJECT_DIR pointed at a real project with a real state
+    file. This test copies the ACTUAL (fixed) helper alongside
+    session-boot.sh -- not the hook's own inline fallback -- and proves the
+    JSON output surfaces content from a real docs/pipeline/pipeline-state.md
+    at {project_root}/docs/pipeline.
+    """
+    project_dir = tmp_path / "project"
+    hooks_dir = project_dir / ".claude" / "hooks"
+    hooks_dir.mkdir(parents=True)
+    pipeline_dir = project_dir / "docs" / "pipeline"
+    pipeline_dir.mkdir(parents=True)
+
+    state_file = pipeline_dir / "pipeline-state.md"
+    state_file.write_text(
+        '# Pipeline State\n\n'
+        '<!-- PIPELINE_STATUS: {"phase":"build","feature":"g151-regression"} -->\n'
+    )
+
+    # Copy the real helper + hook-lib.sh + session-boot.sh so SCRIPT_DIR-relative
+    # sourcing inside session-boot.sh picks up the FIXED session_state_dir(),
+    # not its own inline fallback (`session_state_dir() { echo "docs/pipeline"; }`).
+    shutil.copy2(HELPER_PATH, hooks_dir / "pipeline-state-path.sh")
+    shutil.copy2(SHARED_HOOKS_DIR / "hook-lib.sh", hooks_dir / "hook-lib.sh")
+    dst_session_boot = hooks_dir / "session-boot.sh"
+    shutil.copy2(SESSION_BOOT_PATH, dst_session_boot)
+
+    env = os.environ.copy()
+    env["CLAUDE_PROJECT_DIR"] = str(project_dir)
+    env.pop("CURSOR_PROJECT_DIR", None)
+
+    result = subprocess.run(
+        ["bash", str(dst_session_boot)],
+        input="{}",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+        cwd=str(project_dir),
+        timeout=10,
+    )
+
+    assert result.returncode == 0, f"session-boot.sh exited non-zero: {result.stderr}"
+    output = json.loads(result.stdout)
+
+    assert output["phase"] == "build", (
+        f"session-boot.sh did not surface the real pipeline-state.md content. "
+        f"Got JSON: {result.stdout!r}"
+    )
+    assert output["feature"] == "g151-regression"
+    assert output["pipeline_active"] is True
+
+    expected_state_dir = os.path.join(os.path.realpath(str(project_dir)), "docs", "pipeline")
+    assert output["state_dir"] == expected_state_dir, (
+        f"session-boot.sh state_dir must be {{project_root}}/docs/pipeline. "
+        f"Got: {output['state_dir']!r}, expected: {expected_state_dir!r}"
     )

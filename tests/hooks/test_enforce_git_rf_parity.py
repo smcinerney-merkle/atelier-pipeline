@@ -14,9 +14,22 @@ before the G-143 fix, split three ways:
 The remaining 3 RF "LEAKS" characterization cases (`checkout <ref> -- <path>`,
 `checkout HEAD -- .`, `checkout -fq`) are INVERTED here to BLOCKED: this
 fork's own checkout regex already closes those gaps correctly (RF's regex
-is weaker there) -- see the LEAKS-vs-BLOCKED cases below. `git switch
---discard-changes` is kept as a documented characterization gap (still
-LEAKS): the regex only ever inspects the `checkout` verb, not `switch`.
+is weaker there) -- see the LEAKS-vs-BLOCKED cases below.
+
+G-151/P5 (2026-09-25, operator decision): `git switch --discard-changes`
+was kept as a documented, un-fixed characterization gap here through
+5.2.3 (the old checkout regex never inspected `switch` at all). It is
+CLOSED now -- `switch` joined the write-verb alternation and
+`--discard-changes` is not one of the trailing forms GIT_WRITE_EXEMPT's
+switch arm admits (see source/claude/hooks/enforce-git.sh's
+GIT_WRITE_EXEMPT header) -- so the row below flips from LEAKS to BLOCKED.
+
+G-151/P3 (2026-09-25, operator decision): the test-runner identity guard
+this file's `test-runner gate` section exercised was DELETED entirely, not
+narrowed -- test runners are allowed for every agent now. The
+`test_rf_test_runner_blocked_for_sarah` row this section used to assert is
+removed (not skipped); the "allowed for X" rows below stay, plus new rows
+covering the identities that were previously refused (sarah, ellis, cal).
 """
 
 import pytest
@@ -117,9 +130,13 @@ def test_rf_word_boundary_over_match_guards(hook_env, command):
     _allowed(_run(hook_env, command, "colby"))
 
 
-# ── test-runner gate (G-111/G-112 ported) ────────────────────────────────
+# ── test-runner commands: allowed for everyone (G-151/P3) ────────────────
+# G-151/P3 deleted the identity-gated test-runner guard this section used
+# to exercise. The list name is kept (RF's own case corpus) but the guard
+# it once probed is gone -- every row below is now allowed regardless of
+# agent identity, with no allowlist left to leak past.
 
-MUST_BLOCK_FOR_NON_ALLOWLISTED = [
+TEST_RUNNER_COMMANDS = [
     "npm run test:run",
     "npm run test:e2e",
     "npm test",
@@ -148,35 +165,47 @@ MUST_BLOCK_FOR_NON_ALLOWLISTED = [
 ]
 
 
-@pytest.mark.parametrize("command", MUST_BLOCK_FOR_NON_ALLOWLISTED)
-def test_rf_test_runner_blocked_for_sarah(hook_env, command):
-    _blocked(_run(hook_env, command, "sarah"))
-
-
-@pytest.mark.parametrize("command", MUST_BLOCK_FOR_NON_ALLOWLISTED)
+@pytest.mark.parametrize("command", TEST_RUNNER_COMMANDS)
 def test_rf_test_runner_allowed_for_colby(hook_env, command):
     _allowed(_run(hook_env, command, "colby"))
 
 
-@pytest.mark.parametrize("command", MUST_BLOCK_FOR_NON_ALLOWLISTED)
+@pytest.mark.parametrize("command", TEST_RUNNER_COMMANDS)
 def test_rf_test_runner_allowed_for_poirot(hook_env, command):
-    """G-143: the fork's message claimed Poirot was allowed; the code only
-    admitted `colby`. This is the fix."""
     _allowed(_run(hook_env, command, "poirot"))
 
 
-@pytest.mark.parametrize("command", MUST_BLOCK_FOR_NON_ALLOWLISTED)
+@pytest.mark.parametrize("command", TEST_RUNNER_COMMANDS)
 def test_rf_test_runner_allowed_for_investigator(hook_env, command):
     """Poirot's registered subagent_type is `investigator`."""
     _allowed(_run(hook_env, command, "investigator"))
 
 
-@pytest.mark.parametrize("command", MUST_BLOCK_FOR_NON_ALLOWLISTED)
+@pytest.mark.parametrize("command", TEST_RUNNER_COMMANDS)
 def test_rf_test_runner_allowed_for_main_thread(hook_env, command):
-    """G-143: pipeline-orchestration.md's mandatory gates require Eva to
-    run the suite via Bash directly. The main thread has an empty
-    agent_type."""
     _allowed(_run(hook_env, command, None))
+
+
+@pytest.mark.parametrize("command", TEST_RUNNER_COMMANDS)
+def test_g151_p3_test_runner_allowed_for_sarah(hook_env, command):
+    """G-151/P3: previously blocked identity under the deleted guard --
+    allowed now that the guard is gone."""
+    _allowed(_run(hook_env, command, "sarah"))
+
+
+@pytest.mark.parametrize("command", TEST_RUNNER_COMMANDS)
+def test_g151_p3_test_runner_allowed_for_ellis(hook_env, command):
+    """G-151/P3: previously blocked identity under the deleted guard --
+    allowed now that the guard is gone."""
+    _allowed(_run(hook_env, command, "ellis"))
+
+
+@pytest.mark.parametrize("command", TEST_RUNNER_COMMANDS)
+def test_g151_p3_test_runner_allowed_for_cal(hook_env, command):
+    """G-151/P3: previously blocked identity under the deleted guard
+    (see the deleted test_pytest_execution_cal_blocked in
+    test_enforce_git.py) -- allowed now that the guard is gone."""
+    _allowed(_run(hook_env, command, "cal-111"))
 
 
 MUST_ALLOW_NON_TEST_COMMANDS = [
@@ -236,9 +265,18 @@ def test_rf_checkout_gap_inverted_to_blocked(hook_env, command):
     _blocked(_run(hook_env, command, "colby"))
 
 
-def test_rf_switch_discard_changes_still_leaks_documented_gap(hook_env):
-    """Different verb entirely (`switch`, not `checkout`); the regex never
-    inspects it. Left open deliberately -- if this starts failing, the gap
-    has been closed and this test should be updated on purpose, not
-    treated as a surprise regression."""
-    _allowed(_run(hook_env, "git switch --discard-changes main", "colby"))
+def test_g151_p5_switch_discard_changes_now_blocked(hook_env):
+    """G-151/P5 (closes G-145): `switch` now joins the write-verb
+    alternation, and `--discard-changes` is not one of the trailing forms
+    GIT_WRITE_EXEMPT's switch arm admits (same class as `-f`/`--force`).
+    This flips from the documented, un-fixed LEAKS characterization this
+    test used to assert (test_rf_switch_discard_changes_still_leaks_
+    documented_gap) to BLOCKED."""
+    _blocked(_run(hook_env, "git switch --discard-changes main", "colby"))
+
+
+def test_g151_p2_plain_switch_stays_allowed(hook_env):
+    """G-151/P2: unlike checkout, a plain `git switch <branch>` stays
+    allowed -- switch's own exempt arm in GIT_WRITE_EXEMPT requires no
+    leading flag at all."""
+    _allowed(_run(hook_env, "git switch main", "colby"))

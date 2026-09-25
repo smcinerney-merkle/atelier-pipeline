@@ -15,7 +15,7 @@ Eva creates a `session/<8-hex>` branch and worktree at pipeline start via:
 
 All build work happens in the worktree on the session branch. At pipeline end,
 Ellis fast-forward merges the session branch to main:
-`git checkout main && git merge --ff-only session/<id>`
+`git switch main && git merge --ff-only session/<id>`
 
 If the fast-forward fails (main has diverged), Ellis rebases the session
 branch onto main first, then fast-forward merges. The user is informed but

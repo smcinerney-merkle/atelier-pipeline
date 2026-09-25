@@ -1123,6 +1123,67 @@ Files are assembled from `source/shared/` (content) + `source/claude/` (overlays
 
 This guard does NOT apply to rules, agents, commands, references, or hooks — those are always overwritten from source templates on re-sync.
 
+**pipeline-config.json missing-key merge (G-151 note item 8):** The 5
+`docs/pipeline/` files stay on the plain skip rule above — nothing further
+happens to them. `.claude/pipeline-config.json` (or `.cursor/pipeline-config.json`
+on Cursor) gets one additional step when the file already exists: run
+`scripts/merge-pipeline-config.sh` with plugin-rooted paths -- the script
+lives in the plugin, not the target project, so a bare relative path
+resolves nowhere once setup is running inside the target project's own
+working directory. Same platform detection as Step 3c (`CURSOR_PROJECT_DIR`
+env var), same plugin-root variable per platform as the `${CLAUDE_PLUGIN_ROOT}`
+example in the "Where Files Are Installed" contract above (Cursor's
+equivalent is `${CURSOR_PLUGIN_ROOT}`, per `.cursor-plugin/plugin.json`'s
+own hook registration):
+
+```bash
+if [ -n "${CURSOR_PROJECT_DIR:-}" ]; then
+  PLUGIN_ROOT="${CURSOR_PLUGIN_ROOT}"
+  INSTALLED=".cursor/pipeline-config.json"
+else
+  PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT}"
+  INSTALLED=".claude/pipeline-config.json"
+fi
+"${PLUGIN_ROOT}/scripts/merge-pipeline-config.sh" \
+  "${PLUGIN_ROOT}/source/shared/pipeline/pipeline-config.json" \
+  "$INSTALLED"
+```
+
+This adds any top-level key the template
+(`source/shared/pipeline/pipeline-config.json`) has that the installed file
+lacks, using the template's value. This is the same mechanism "Preserve an
+existing enforcement-config.json" (`hooks.md`, Step 3a) already uses for
+`enforcement-config.json` — `jq -s '.[0] + .[1]'`, right-hand side (installed)
+wins, one-line outcome report, malformed JSON left untouched with a warning.
+Keys already present in the installed file are never changed, even when
+their value differs from the template or is empty.
+
+Run this merge **after** all of Step 1's interactive setup questions have
+completed — in particular after Step 1f's existing-`agent_roster` detection,
+which reads the installed file's pre-merge state to decide whether to ask
+the roster questions at all. Running the merge earlier could add a key
+before the question that depends on its absence gets asked.
+
+**`agent_roster` is never added by this merge**, even though the template
+has it and an older installed file may lack it. Its absence is the exact
+signal Step 1f's "Existing roster detection" reads (see `agent_roster`
+above) — mechanically adding it here would defeat that check on every
+re-run. The script excludes it unconditionally; it is not a matter of the
+template happening to omit it.
+
+Report the outcome in one line, same style as the enforcement-config.json
+report:
+- **Keys added:** `pipeline-config.json preserved; added missing keys: <comma-separated list>.`
+- **Nothing missing:** `pipeline-config.json preserved; no keys added.`
+- **Malformed JSON:** `WARNING: .claude/pipeline-config.json is not valid JSON -- left unchanged. Fix it by hand, then re-run /pipeline-setup.`
+- **Fresh install (file didn't exist):** no merge runs — the plain copy above already installed the current template verbatim.
+
+`scripts/merge-pipeline-config.sh` is tested directly in
+`tests/scripts/test_merge_pipeline_config.py` (existing-key preservation,
+missing-key addition, `agent_roster` exclusion, malformed-JSON
+byte-identity) — it is not documentation prose the skill re-derives at
+install time.
+
 See `hooks.md` for hook script installation (Step 3a), version marker (Step 3b), and Cursor rules sync (Step 3c).
 
 ### Step 4: Customize Placeholders

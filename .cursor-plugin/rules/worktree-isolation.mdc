@@ -92,7 +92,7 @@ Agatha, Ellis (build/commit), and Poirot.
 In trunk-based development, Eva creates a `session/<8-hex>` branch and
 worktree. All build work happens in the worktree on the session branch. At
 pipeline end, Ellis fast-forward merges the session branch to main:
-`git checkout main && git merge --ff-only session/<id>`. If the ff merge
+`git switch main && git merge --ff-only session/<id>`. If the ff merge
 fails (main has diverged), Ellis rebases the session branch onto main first
 and informs the user. After successful merge, Ellis removes the worktree and
 deletes the session branch.

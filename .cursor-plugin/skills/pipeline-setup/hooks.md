@@ -22,7 +22,7 @@ optional and must be installed for the pipeline to function correctly.
 | `source/claude/hooks/pre-compact.sh` | `.claude/hooks/pre-compact.sh` | Writes compaction marker to pipeline-state.md before context is compacted (PreCompact) |
 | `source/claude/hooks/log-agent-start.sh` | `.claude/hooks/log-agent-start.sh` | Logs agent start events to JSONL telemetry file (SubagentStart) |
 | `source/claude/hooks/log-agent-stop.sh` | `.claude/hooks/log-agent-stop.sh` | Logs agent stop events to JSONL telemetry file (SubagentStop) |
-| `source/claude/hooks/enforce-colby-stop-verify.sh` | `.claude/hooks/enforce-colby-stop-verify.sh` | Runs verify_commands.format + verify_commands.typecheck after Colby stops; exits 2 on typecheck failure to re-engage Colby (SubagentStop, ADR-0050). **Claude Code only -- Cursor does not support SubagentStop** (see `source/cursor/agents/brain-extractor.frontmatter.yml`); Cursor installs intentionally omit this hook. |
+| `source/claude/hooks/enforce-colby-stop-verify.sh` | `.claude/hooks/enforce-colby-stop-verify.sh` | Runs verify_commands.format + verify_commands.typecheck after Colby stops; exits 2 on typecheck failure to re-engage Colby (SubagentStop, ADR-0050). **Claude Code only -- Cursor does not support SubagentStop**; Cursor installs intentionally omit this hook. |
 | `source/claude/hooks/post-compact-reinject.sh` | `.claude/hooks/post-compact-reinject.sh` | Re-injects pipeline-state.md and context-brief.md after compaction (PostCompact) |
 | `source/claude/hooks/log-stop-failure.sh` | `.claude/hooks/log-stop-failure.sh` | Appends error entry to error-patterns.md on agent failure (StopFailure) |
 | `source/claude/hooks/prompt-brain-prefetch.sh` | `.claude/hooks/prompt-brain-prefetch.sh` | Brain prefetch prompt injection (Prompt) |
@@ -32,12 +32,9 @@ optional and must be installed for the pipeline to function correctly.
 | `source/claude/hooks/enforce-spawn-name.sh` | `.claude/hooks/enforce-spawn-name.sh` | Blocks a named Agent spawn whose name does not match its subagent_type (G-142) — fires second in the Agent PreToolUse chain, right after enforce-brain-capture-gate.sh; no `if` conditional |
 | `source/claude/hooks/enforce-brain-capture-pending.sh` | `.claude/hooks/enforce-brain-capture-pending.sh` | Writes .pending-brain-capture.json marker when an allowlisted agent stops (SubagentStop, ADR-0053) |
 | `source/claude/hooks/clear-brain-capture-pending.sh` | `.claude/hooks/clear-brain-capture-pending.sh` | Deletes .pending-brain-capture.json when agent_capture succeeds — suffix-matches *__agent_capture to support any plugin prefix (PostToolUse, ADR-0053) |
-| `source/shared/agents/brain-extractor.md` | `.claude/agents/brain-extractor.md` | Brain knowledge extractor agent (assembled with frontmatter overlay below) |
-| `source/claude/agents/brain-extractor.frontmatter.yml` | (assembled with above into `.claude/agents/brain-extractor.md`) | Claude Code frontmatter for brain-extractor agent |
-| `source/cursor/agents/brain-extractor.frontmatter.yml` | `.cursor-plugin/agents/brain-extractor.md` | Cursor frontmatter for brain-extractor agent |
 | `source/shared/hooks/session-boot.sh` | `.claude/hooks/session-boot.sh` | Session boot data collector (SessionStart) -- reads pipeline state and config |
 | `source/shared/hooks/hook-lib.sh` | `.claude/hooks/hook-lib.sh` | Shared hook utility library — JSON parsers, agent type extraction, deny/allow emitters (sourced by enforcement and telemetry hooks) |
-| `source/shared/hooks/pipeline-state-path.sh` | `.claude/hooks/pipeline-state-path.sh` | Per-worktree session state path resolver — session_state_dir() and error_patterns_path() (sourced by session-boot, post-compact-reinject, prompt-compact-advisory) |
+| `source/shared/hooks/pipeline-state-path.sh` | `.claude/hooks/pipeline-state-path.sh` | Session state path resolver — session_state_dir() and error_patterns_path() (sourced by session-boot, post-compact-reinject, prompt-compact-advisory) |
 | `source/claude/hooks/enforcement-config.json` | `.claude/hooks/enforcement-config.json` | Project-specific paths and agent rules. **Never overwrite an existing copy** -- see "Preserve an existing enforcement-config.json" below. |
 
 #### Preserve an existing enforcement-config.json
@@ -195,14 +192,7 @@ file already exists. Add this hooks section:
           },
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prompt-compact-advisory.sh",
-            "if": "agent_type == 'ellis'"
-          },
-          {
-            "type": "agent",
-            "agent": "brain-extractor",
-            "prompt": "Extract decisions, patterns, and lessons from the completed agent's output and capture them to the brain via agent_capture.",
-            "if": "agent_type == 'sarah' || agent_type == 'colby' || agent_type == 'agatha' || agent_type == 'robert' || agent_type == 'robert-spec' || agent_type == 'sable' || agent_type == 'sable-ux' || agent_type == 'ellis'"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prompt-compact-advisory.sh"
           }
         ]
       }
@@ -231,6 +221,26 @@ file already exists. Add this hooks section:
 }
 ```
 
+**prompt-compact-advisory.sh carries no `if` conditional.** G-107/G-143
+established that the harness's `if` field evaluates a narrow
+permission-rule form (e.g. `Bash(git *)`), never a JS boolean expression
+like `agent_type == 'ellis'` -- that class of `if` silently never fires,
+for any hook event. The script filters for Ellis itself via
+`hook_lib_agent_type_matches` (bare `ellis` and named `ellis-*` instances),
+with an inline `case` fallback if `hook-lib.sh` fails to load, so removing
+the dead `if` changes nothing about who the advisory fires for.
+
+**No brain-extractor entry in SubagentStop.** Per
+`source/shared/rules/pipeline-orchestration.md` ("The brain-extractor agent
+no longer exists"), ADR-0053 replaced it with the three-hook mechanical
+capture gate (`enforce-brain-capture-pending.sh` / `enforce-brain-capture-gate.sh`
+/ `clear-brain-capture-pending.sh`, all already registered above). There is
+no `source/shared/agents/brain-extractor.md` or frontmatter overlay to
+install, in this repo or in the template -- a conditional "register only if
+installed" check would check for a file setup itself never creates, which
+makes it dead logic in the same way the `if` above was. Do not register a
+`type: agent, agent: brain-extractor` entry.
+
 **Per-agent path guards are registered twice on purpose.** The six guards
 (`enforce-{colby,sarah,ellis,agatha,product,ux}-paths.sh`) are also declared in
 their agents' frontmatter (`source/claude/agents/*.frontmatter.yml`). Each guard
@@ -244,7 +254,9 @@ sits under `Write|Edit` because her script checks only those tools.
 If `jq` is not available, tell the user: "Install jq for pipeline enforcement hooks:
 `brew install jq` (macOS) or `apt install jq` (Linux)."
 
-**Total with hooks: 39 mandatory files across 7 directories.**
+**Total with hooks: 36 mandatory files across 7 directories.** (Reduced from
+39: three rows for the never-installable brain-extractor agent file and its
+two frontmatter overlays were removed from the table above -- G-151.)
 
 #### Custom Agent Discovery
 

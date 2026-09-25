@@ -23,8 +23,14 @@ TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)
 case "$TOOL_NAME" in Write|Edit|MultiEdit) ;; *) exit 0 ;; esac
 
 # Only fire on the main thread (Eva). Subagents pass through.
-AGENT_ID=$(echo "$INPUT" | jq -r '.agent_id // empty' 2>/dev/null || true)
-[ -n "$AGENT_ID" ] && exit 0
+# .agent_id is populated on SubagentStart/Stop payloads, not PreToolUse --
+# reading it here always returned empty, so the reminder fired for
+# subagents too, telling them "the hard gate will block this call" even
+# when enforce-eva-paths.sh, given the same payload, exits 0 and permits
+# it. Read .agent_type // .tool_input.subagent_type instead (matches
+# hook_lib_get_agent_type's priority order in hook-lib.sh).
+AGENT_TYPE=$(echo "$INPUT" | jq -r '.agent_type // .tool_input.subagent_type // empty' 2>/dev/null || true)
+[ -n "$AGENT_TYPE" ] && exit 0
 
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || true)
 [ -z "$FILE_PATH" ] && exit 0

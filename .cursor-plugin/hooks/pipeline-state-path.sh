@@ -1,11 +1,19 @@
 #!/bin/bash
-# pipeline-state-path.sh -- Per-worktree session state path resolver
-# Implements ADR-0032 Decision: session state files live out-of-repo,
-# in a per-worktree directory under ~/.atelier/pipeline/.
+# pipeline-state-path.sh -- Session state path resolver
 #
 # Exports two distinct functions:
-#   session_state_dir()     -- per-worktree, out-of-repo
+#   session_state_dir()     -- in-repo, project-relative
 #   error_patterns_path()   -- in-repo, unchanged (ADR-0032 Decision)
+#
+# ADR-0032 originally specified an out-of-repo, per-worktree directory under
+# ~/.atelier/pipeline/{project-slug}/{8-char-hash}/. That directory was
+# created by this function's own `mkdir -p` but never populated by any
+# writer -- every reader (session-boot.sh, post-compact-reinject.sh,
+# prompt-compact-advisory.sh) silently read nothing from it. Fixed 2026-09-25
+# (G-151): session_state_dir() now returns {project_root}/docs/pipeline as
+# the primary path -- in-repo, git-tracked, and consistent with the seven
+# hooks that already resolve pipeline_state_dir via enforcement-config.json,
+# and with both callers' own fallback definitions.
 #
 # Non-blocking: exits 0 on every error path. Falls back to docs/pipeline/
 # if resolution fails. Retro lesson #003 compliant.
@@ -19,24 +27,24 @@
 # ─── session_state_dir ────────────────────────────────────────────────────────
 #
 # Returns an absolute path of the form:
-#   ~/.atelier/pipeline/{project-slug}/{8-char-hash}/
+#   {project_root}/docs/pipeline
 #
 # Resolution order:
 #   (a) CLAUDE_PROJECT_DIR env var  -- set by Claude Code
 #   (b) CURSOR_PROJECT_DIR env var  -- set by Cursor
-#   (c) pwd                         -- fallback to current directory
+#   (c) pwd                         -- fallback to current directory (relative "docs/pipeline")
 #
-# On any failure (missing sha256sum, unresolvable path, mkdir error) the
-# function prints the legacy path docs/pipeline and exits 0 -- the caller
-# gets a valid (relative) path it can still use.
+# On any failure (no project dir env var, unresolvable path) the function
+# prints the legacy relative path docs/pipeline and exits 0 -- the caller
+# gets a valid path it can still use.
 
 session_state_dir() {
   local project_root=""
 
-  # Resolve project root — only use the out-of-repo path when an explicit
-  # project directory env var is set. Without one, we cannot distinguish a
-  # transient subprocess (e.g. a test runner with cwd=/tmp/xxx) from a real
-  # worktree, so we fall back to the legacy in-repo path.
+  # Resolve project root — only use the project-relative absolute path when
+  # an explicit project directory env var is set. Without one, we cannot
+  # distinguish a transient subprocess (e.g. a test runner with cwd=/tmp/xxx)
+  # from a real worktree, so we fall back to the legacy relative path.
   if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
     project_root="$CLAUDE_PROJECT_DIR"
   elif [ -n "${CURSOR_PROJECT_DIR:-}" ]; then
@@ -54,53 +62,7 @@ session_state_dir() {
     return 0
   }
 
-  # Compute project slug from the last path component
-  local project_slug
-  project_slug="$(basename "$project_root" 2>/dev/null)" || {
-    echo "docs/pipeline"
-    return 0
-  }
-
-  # Compute 8-char hash of the absolute worktree root
-  local worktree_hash
-  if command -v sha256sum &>/dev/null; then
-    # The || guard fires on a non-zero subshell exit (pipeline failure, e.g. sha256sum
-    # itself exits non-zero). It does NOT protect against sha256sum silently producing
-    # empty output while head exits 0 — that case is caught by the
-    # [ "${#worktree_hash}" -ne 8 ] length check immediately below.
-    worktree_hash="$(printf '%s' "$project_root" | sha256sum 2>/dev/null | head -c 8)" || {
-      echo "docs/pipeline"
-      return 0
-    }
-  elif command -v shasum &>/dev/null; then
-    # macOS fallback
-    # Same || semantics as above: guards subshell non-zero exits only.
-    # The primary guard for empty/partial hash output is the length check below.
-    worktree_hash="$(printf '%s' "$project_root" | shasum -a 256 2>/dev/null | head -c 8)" || {
-      echo "docs/pipeline"
-      return 0
-    }
-  else
-    # No sha utility available -- fall back
-    echo "docs/pipeline"
-    return 0
-  fi
-
-  # Validate hash produced 8 chars (primary guard for empty/partial hash output)
-  if [ "${#worktree_hash}" -ne 8 ]; then
-    echo "docs/pipeline"
-    return 0
-  fi
-
-  local state_dir="${HOME}/.atelier/pipeline/${project_slug}/${worktree_hash}"
-
-  # Ensure directory exists (mkdir -p is idempotent)
-  mkdir -p "$state_dir" 2>/dev/null || {
-    echo "docs/pipeline"
-    return 0
-  }
-
-  echo "$state_dir"
+  echo "$project_root/docs/pipeline"
   return 0
 }
 
