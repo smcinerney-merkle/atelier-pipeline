@@ -46,8 +46,6 @@ BLOCKED_GIT_WRITE_COMMANDS = [
     "git checkout --ours .",
     "git checkout --theirs x",
     "git checkout --patch",
-    "git checkout --detach",
-    "git checkout --help",
     "git checkout -f",
     "git checkout -- .",
     "git checkout --",
@@ -88,6 +86,16 @@ ALLOWED_GIT_COMMANDS = [
     "git diff -- path/to/file.ts",
     "git checkout -b newbranch",
     'echo "run git commit later"',
+    # G-147 FLIP: these two moved here from BLOCKED_GIT_WRITE_COMMANDS above.
+    # Before G-147, this fork's checkout regex had no exemption mechanism at
+    # all, so any "checkout --<longform>" without a path was caught by the
+    # "--" branch of the destructive-checkout clause and blocked. G-147 ports
+    # Guru's GIT_WRITE_EXEMPT allowlist (merge --ff-only | stash list/show |
+    # checkout --detach|--track|--help), which explicitly exempts a bare
+    # `checkout --detach` / `checkout --help` (no trailing arg, or a trailing
+    # arg not starting with '-' or '.') as a non-destructive branch operation.
+    "git checkout --detach",
+    "git checkout --help",
 ]
 
 

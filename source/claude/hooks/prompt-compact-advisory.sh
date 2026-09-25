@@ -32,7 +32,7 @@ else
   case "$AGENT_TYPE" in ellis|ellis-*) ;; *) exit 0 ;; esac
 fi
 if [ ! -f "$STATE_FILE" ]; then exit 0; fi
-PHASE=$(cat "$STATE_FILE" | hook_lib_pipeline_status_field phase 2>/dev/null || true)
+PHASE=$(hook_lib_pipeline_status_field phase < "$STATE_FILE" 2>/dev/null || true)
 case "$PHASE" in
   build|implement)
     echo 'WAVE BOUNDARY: Ellis completed a per-wave commit. Pipeline state is fully persisted. Before starting the next wave, suggest to the user: "This is a good moment to run /compact -- wave state is saved and the next wave will start with cleaner context." Do not auto-compact; this is the user'"'"'s decision.'

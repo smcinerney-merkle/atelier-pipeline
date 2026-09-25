@@ -10,7 +10,13 @@
 # Do NOT use set -e -- graceful degradation (retro lesson #003)
 set -uo pipefail
 
-INPUT=$(cat 2>/dev/null) || true
+# Drain stdin -- Claude Code writes a JSON payload to every hook's stdin.
+# This script does not parse it, but a hook that exits without consuming
+# its stdin can hand the writer a broken pipe (EPIPE/SIGPIPE). No variable
+# is assigned because SC2034 cannot see the side effect; the drain is
+# the point. See sibling hook clear-brain-capture-pending.sh:27 for the
+# pattern used when the payload IS parsed.
+cat >/dev/null 2>&1 || true
 
 # Source the pipeline-state-path helper (ADR-0032 implementation)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
@@ -61,9 +67,9 @@ STATE_DIR=$(session_state_dir)
 PIPELINE_STATE_FILE="$STATE_DIR/pipeline-state.md"
 if [ -f "$PIPELINE_STATE_FILE" ]; then
   if command -v jq &>/dev/null; then
-    PHASE=$(cat "$PIPELINE_STATE_FILE" | hook_lib_pipeline_status_field phase 2>/dev/null || echo "idle")
+    PHASE=$(hook_lib_pipeline_status_field phase < "$PIPELINE_STATE_FILE" 2>/dev/null || echo "idle")
     [ -z "$PHASE" ] && PHASE="idle"
-    FEATURE=$(cat "$PIPELINE_STATE_FILE" | hook_lib_pipeline_status_field feature 2>/dev/null || echo "")
+    FEATURE=$(hook_lib_pipeline_status_field feature < "$PIPELINE_STATE_FILE" 2>/dev/null || echo "")
     if [ "$PHASE" != "idle" ] && [ "$PHASE" != "complete" ] && [ -n "$FEATURE" ]; then
       PIPELINE_ACTIVE=true
     fi

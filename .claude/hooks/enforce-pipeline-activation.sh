@@ -74,7 +74,7 @@ cp "$STATE_FILE" "$STATE_SNAPSHOT" 2>/dev/null || {
 }
 
 # Extract phase from PIPELINE_STATUS marker via hook-lib
-PHASE=$(cat "$STATE_SNAPSHOT" | hook_lib_pipeline_status_field phase 2>/dev/null) || true
+PHASE=$(hook_lib_pipeline_status_field phase < "$STATE_SNAPSHOT" 2>/dev/null) || true
 
 # No PIPELINE_STATUS marker or no phase -> no active pipeline -> block
 if [ -z "$PHASE" ]; then

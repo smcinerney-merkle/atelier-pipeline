@@ -49,12 +49,15 @@ def test_pipeline_config_has_model_provider_field() -> None:
 def test_pipeline_models_contains_bedrock_ids() -> None:
     """ADR-0054 (e): pipeline-models.md contains Bedrock-shaped model IDs.
 
-    Bedrock IDs follow the pattern `anthropic.claude-{family}-{ver}-{date}-v1:0`.
+    Haiku still follows the dated `anthropic.claude-{family}-{ver}-{date}-v1:0`
+    pattern. Opus/Sonnet moved to the bare `claude-{family}-5` alias (G-147
+    item C) -- Bedrock resolves the same alias string as anthropic/vertex for
+    those two families, so there is no separate dated suffix to assert.
     """
     text = PIPELINE_MODELS.read_text(encoding="utf-8")
     expected = [
-        "anthropic.claude-opus-4-7-20250514-v1:0",
-        "anthropic.claude-sonnet-4-6-20250514-v1:0",
+        "anthropic.claude-opus-5",
+        "anthropic.claude-sonnet-5",
         "anthropic.claude-haiku-4-5-20251001-v1:0",
     ]
     for needle in expected:
@@ -70,12 +73,14 @@ def test_pipeline_models_contains_bedrock_ids() -> None:
 def test_pipeline_models_contains_vertex_ids() -> None:
     """ADR-0054 (f): pipeline-models.md contains Vertex-shaped model IDs.
 
-    Vertex IDs follow the pattern `claude-{family}@NNN`.
+    Haiku still follows the `claude-{family}@NNN` pattern. Opus/Sonnet moved
+    to the bare `claude-{family}-5` alias (G-147 item C) -- vertex resolves
+    the same alias string as anthropic/bedrock for those two families.
     """
     text = PIPELINE_MODELS.read_text(encoding="utf-8")
     expected = [
-        "claude-opus@002",
-        "claude-sonnet@001",
+        "claude-opus-5",
+        "claude-sonnet-5",
         "claude-haiku@001",
     ]
     for needle in expected:

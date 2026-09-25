@@ -93,7 +93,7 @@ cp "$STATE_FILE" "$STATE_SNAPSHOT" 2>/dev/null || { rm -f "$STATE_SNAPSHOT"; exi
 # Returns empty string if marker is absent or JSON is malformed.
 parse_pipeline_status() {
   local field="$1"
-  cat "$STATE_SNAPSHOT" | hook_lib_pipeline_status_field "$field"
+  hook_lib_pipeline_status_field "$field" < "$STATE_SNAPSHOT"
 }
 
 # ─── Gate 0b: Investigator must be directed to the configured worktree ─

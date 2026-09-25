@@ -288,7 +288,18 @@ DESTRUCTIVE_CHECKOUTS = [
     "git checkout --ours src/x.ts",
     "git checkout --theirs src/x.ts",
     "git checkout --patch",
+]
+
+# G-147 FLIP: a bare "git checkout --detach" (and "--track"/"--help") moved
+# out of DESTRUCTIVE_CHECKOUTS above. G-147 ports Guru's GIT_WRITE_EXEMPT
+# allowlist into this fork's enforce-git.sh, which explicitly exempts a bare
+# long-form checkout with no trailing arg (or a trailing arg not starting
+# with '-' or '.') as a non-destructive branch operation. See
+# tests/hooks/test_enforce_git_rf_parity.py's matching G-147 FLIP comment.
+GIT_CHECKOUT_EXEMPT_LONGFORMS = [
     "git checkout --detach",
+    "git checkout --track",
+    "git checkout --help",
 ]
 
 
@@ -320,6 +331,14 @@ def test_git_write_allowed_for_ellis(tmp_path, agent, command):
 def test_git_ellis_lookalike_blocked(tmp_path, agent):
     r = _git(tmp_path, "git commit -m x", agent_type=agent, agent_id="a1")
     assert r.returncode == 2, r.stdout
+
+
+@pytest.mark.parametrize("command", GIT_CHECKOUT_EXEMPT_LONGFORMS)
+def test_git_checkout_exempt_longforms_allowed_for_non_ellis(tmp_path, command):
+    """G-147: bare checkout --detach/--track/--help are exempt (non-destructive
+    branch operations), allowed for every agent, not just Ellis."""
+    r = _git(tmp_path, command, agent_type="colby-u10-tiebreak", agent_id="a1")
+    assert r.returncode == 0, r.stdout
 
 
 @pytest.mark.parametrize("command", [

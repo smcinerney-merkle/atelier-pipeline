@@ -105,7 +105,11 @@ fi
 
 # Rule 3 (OVERLAP): the longest-matching base across {subagent_type} plus
 # the full persona roster must be exactly the declared subagent_type.
-PERSONAS=($(hook_lib_agent_personas))
+# hook_lib_agent_personas prints one space-separated line; read -a splits on
+# IFS without the pathname-expansion risk of an unquoted $(...) (SC2207).
+# mapfile/readarray are not used here -- /bin/bash on macOS is 3.2, which
+# predates both.
+IFS=' ' read -r -a PERSONAS <<< "$(hook_lib_agent_personas)"
 BASE=$(hook_lib_agent_base_type "$SPAWN_NAME" "$SUBAGENT_TYPE" "${PERSONAS[@]}") || BASE=""
 if [ "$BASE" != "$SUBAGENT_TYPE" ]; then
   echo "BLOCKED: Agent spawned with name '$SPAWN_NAME' and subagent_type '$SUBAGENT_TYPE', but '$SPAWN_NAME' also matches the more specific persona '$BASE'. A named teammate's name must not embed a different, more specific persona prefix than the type it was actually spawned as -- otherwise a guard keying on name (e.g. a per-agent write allowlist) resolves to '$BASE' instead of '$SUBAGENT_TYPE'. Fix: spawn as subagent_type '$BASE', or choose a name that only matches '$SUBAGENT_TYPE'." >&2

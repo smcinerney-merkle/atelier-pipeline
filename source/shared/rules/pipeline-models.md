@@ -94,10 +94,10 @@ tool invocation based on this table plus the promotion signals above.
 | **sable-ux (producer)** | 2 | sonnet | medium | UX doc authoring; sonnet/medium covers structured design work. Opus only via escalation gate (novel interaction paradigm, user-confirmed) |
 | **Sentinel** | 2 | sonnet | low | Pattern-matching SAST with effort: low suppresses Opus reasoning; Sonnet matches the actual workload. Mechanical task signal -- effort demoted medium→low. |
 | **Agatha** | 2 | sonnet | medium | Documentation authoring; sonnet/medium covers structured writing. Opus only via escalation gate (full information architecture restructure, user-confirmed). Always Tier 2 (no runtime override) |
-| **synthesis** | 2 | sonnet | low | Filter/rank/trim of scout output; no judgment, no opinions. Registered subagent (ADR-0048) — frontmatter pins `claude-sonnet-4-6`; invocation omits the `model` parameter |
+| **synthesis** | 2 | sonnet | low | Filter/rank/trim of scout output; no judgment, no opinions. Registered subagent (ADR-0048) — frontmatter declares the bare logical alias `model: sonnet`; invocation omits the `model` parameter |
 | **Ellis** | 1 | sonnet | low | Commit-message composition; Sonnet/low cheaper per successful pass than Haiku rework |
 | **Distillator** | 1 | sonnet | low | Structured compression; Sonnet/low preserves load-bearing facts Haiku drops |
-| **scout** | 1 | haiku | low | File/grep/read only; no synthesis. Registered subagent (ADR-0048) — frontmatter pins `claude-haiku-4-5-20251001`; invocation omits the `model` parameter |
+| **scout** | 1 | haiku | low | File/grep/read only; no synthesis. Registered subagent (ADR-0048) — frontmatter declares the bare logical alias `model: haiku`; invocation omits the `model` parameter |
 
 </model-table>
 
@@ -107,7 +107,8 @@ tool invocation based on this table plus the promotion signals above.
 
 > **CRITICAL — Agent tool constraint:** Always pass the logical alias
 > (`"sonnet"`, `"opus"`, or `"haiku"`) to the Agent tool's `model` parameter.
-> Full model ID strings (e.g. `claude-sonnet-4-6`) have been observed to cause
+> Full model ID strings (e.g. `claude-sonnet-4-6` — the exact string observed
+> failing, not a claim about the current model generation) have been observed to cause
 > `Invalid tool parameters` errors in current versions of Claude Code, even
 > though the documentation lists them as valid. Claude Code resolves the alias
 > to the appropriate provider ID internally. Do not pre-translate.
@@ -119,8 +120,8 @@ API contexts — not for Agent tool invocations.
 
 | Logical name | anthropic (default) | bedrock | vertex |
 |--------------|---------------------|---------|--------|
-| **opus** | `claude-opus-4-7` | `anthropic.claude-opus-4-7-20250514-v1:0` | `claude-opus@002` |
-| **sonnet** | `claude-sonnet-4-6` | `anthropic.claude-sonnet-4-6-20250514-v1:0` | `claude-sonnet@001` |
+| **opus** | `claude-opus-5` | `anthropic.claude-opus-5` | `claude-opus-5` |
+| **sonnet** | `claude-sonnet-5` | `anthropic.claude-sonnet-5` | `claude-sonnet-5` |
 | **haiku** | `claude-haiku-4-5-20251001` | `anthropic.claude-haiku-4-5-20251001-v1:0` | `claude-haiku@001` |
 
 **Resolution rules:**

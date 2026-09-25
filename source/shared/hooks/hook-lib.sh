@@ -9,7 +9,19 @@
 #
 # All functions read from stdin when they need input. Callers pipe data in:
 #   echo "$INPUT" | hook_lib_get_agent_type
-#   cat "$STATE_FILE" | hook_lib_pipeline_status_field phase
+#
+# IMPORTANT: hook_lib_pipeline_status_field MUST use a redirect, not a pipe.
+#   CORRECT:  hook_lib_pipeline_status_field phase < "$STATE_FILE"
+#   BROKEN:   cat "$STATE_FILE" | hook_lib_pipeline_status_field phase
+#
+# Why: the function breaks out of its read loop at the first PIPELINE_STATUS
+# marker (pipeline-state.md can accumulate many such lines over a session's
+# lifetime -- one per phase transition -- the active one is always first).
+# That early break only triggers SIGPIPE when the unread remainder still
+# piped in from cat exceeds the pipe buffer -- on a state file large enough
+# for that, cat gets SIGPIPE and exits 141 before finishing its write. Under
+# set -o pipefail the whole pipeline fails even though the function printed
+# the correct value. Always use the redirect form.
 #
 # Non-blocking by design: all functions exit 0 on parse failure and return
 # empty output. Callers treat empty output as "field absent / fail-open".
@@ -24,8 +36,17 @@
 # Format expected on stdin:
 #   <!-- PIPELINE_STATUS: {"phase":"build","feature":"x",...} -->
 #
-# Usage:
-#   value=$(cat "$STATE_FILE" | hook_lib_pipeline_status_field phase)
+# Usage (CORRECT -- use redirect, not pipe):
+#   value=$(hook_lib_pipeline_status_field phase < "$STATE_FILE")
+#
+# NOTE: do NOT use `cat "$STATE_FILE" | hook_lib_pipeline_status_field phase`.
+# This function breaks early after the first PIPELINE_STATUS marker; per the
+# header comment above, that early break only triggers SIGPIPE in cat when
+# the unread remainder still piped in from cat exceeds the pipe buffer (a
+# small state file finishes writing before the break registers, so no
+# SIGPIPE occurs) -- but when it does trigger, set -o pipefail propagates it
+# as a spurious failure in the caller. Always use < redirect, regardless of
+# how large the state file happens to be right now.
 #
 # Returns empty and exits 1 when field is absent or JSON is malformed.
 

@@ -104,7 +104,7 @@ STATE_SNAPSHOT=$(mktemp)
 trap 'rm -f "$STATE_SNAPSHOT"' EXIT
 cp "$STATE_FILE" "$STATE_SNAPSHOT" 2>/dev/null || { rm -f "$STATE_SNAPSHOT"; exit 0; }
 
-SIZING=$(cat "$STATE_SNAPSHOT" | hook_lib_pipeline_status_field sizing 2>/dev/null | tr '[:upper:]' '[:lower:]') || true
+SIZING=$(hook_lib_pipeline_status_field sizing < "$STATE_SNAPSHOT" 2>/dev/null | tr '[:upper:]' '[:lower:]') || true
 
 # ─── v4.0 SIZING GATE ───────────────────────────────────────────────────
 # Scouts are only valuable on Medium/Large pipelines. Micro/Small skip the
